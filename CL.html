@@ -1,0 +1,2025 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="UTF-8">
+	<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css" integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous">
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+	<style>
+		#wrapper {
+			display: flex;
+			justify-content: center; /* center horizontally */
+			align-items: center; /* center vertically */
+			background-color:white;
+		}
+		body {
+		  background-color: #EDF0F5;
+		}
+		table, th, td {
+		  border: 1px solid black;
+		}
+		.uniform {
+			float: left;
+			width: 10px;
+			height: 18px;
+			margin: 3px 3px 3px 3px;
+			border: thin solid black;
+		}
+		.tee_shirt {
+			width: 100%;
+			height: 65%;
+		}
+		.short {
+			width: 100%;
+			height: 35%;
+		}
+		.team_name {
+			border: solid black;
+			border-radius: 5px;
+			background-color: #ebeaec; 
+			text-shadow: -1px 0 black, 0 1px black, 1px 0 black, 0 -1px black;
+			padding-left: 10px;
+			padding-right: 5px;
+			min-width: 75px;
+		}
+		.score_container {
+			width: 100px;
+			display: table-cell;
+		}
+		.match{
+			width: 260px;
+			border-width: 5px;
+			border-style: solid;
+			border-color: #E6E2EB;
+		}
+	</style>
+</head>
+<body align="center">
+
+<div class="container">
+	<div class="row container" style="width:100%;background-color:#111927; position: fixed; z-index:2;">
+		<div class="col">
+			<h2 id="week" style="color:white;" hidden>W-0</h2>
+		</div>
+		<div class="col">
+			<h3 id="clock" style="color:white;">00:00</h3>
+		</div>
+		<div class="col-6">
+			<input type="number" id="timer" value="1" min="1" caption="timer">
+			<input type="number" id="NBMatchs" value="0" caption="number of match to play">
+			<button type="button" class="btn btn-primary" id="btn_next" disabled onclick="next();">Next</button>
+			<button type="button" class="btn btn-primary" id="btn_start" onclick="start();">Start</button>
+		</div>
+	</div>
+	<div class="row" style="top:55px; position:relative;">
+		<div id="pool" class="row" ></div>
+	</div>
+</div>
+
+
+<script>
+
+/*Class Team TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT*/
+
+class Team {
+	constructor(id, name, cName, credit, shirt, shrt, grp = []) {
+		this.id = id;
+		this.name = name;
+		this.fullName = cName;
+		this.credit = credit;
+		this.shirt = shirt;
+		this.shrt = shrt;
+		this.group = grp
+		this.ended = false;
+	}
+
+	/*Each step add a termporary group (number of pool) to the team, this function gets ride of these groups*/
+	clearTempGroups(){
+		this.group = this.group.filter(function(value, index, arr){ 
+			return !value.startsWith("temp_");
+		});
+	}
+	
+	toString = function() {
+		return `${this.name}`;
+	};
+	
+	display(parent, score = 0, notes = ""){
+		this.parent = parent;
+		this.parent.style.width = "120px;"
+		this.parent.appendChild(this.toDom());
+		
+		return this.parent;
+	}
+	
+	toDom(){
+		var domTeam = document.createElement("div");
+		domTeam.title = this.id + "-" + this.fullName + " [" + this.credit + "] " + this.group;
+		
+		//Uniform
+		var uniform = document.createElement("div");
+		uniform.classList.add("uniform");
+		
+		var tshirt = document.createElement("div");
+		tshirt.style.backgroundColor = this.shirt;
+		tshirt.classList.add("tee_shirt");
+		
+		var shrt = document.createElement("div");
+		shrt.style.backgroundColor = this.shrt;
+		shrt.classList.add("short");
+		
+		uniform.appendChild(tshirt);
+		uniform.appendChild(shrt);
+		
+		//name
+		var team_name = document.createElement("h6");
+		team_name.classList.add("team_name");
+		team_name.style.color = this.shirt; 
+		team_name.innerHTML = this.name;
+		
+		
+		domTeam.appendChild(uniform);
+		domTeam.appendChild(team_name);
+		
+		return domTeam;
+	}
+}
+
+/*Match MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM*/
+class Match {
+	constructor(team1, team2, hostben = true, extra = false){
+		this.host = team1;
+		this.visitor = team2;
+		this.hostben = hostben;
+		this.extra = extra;
+		this.host_score = new Array(90).fill(0);
+		this.visitor_score = new Array(90).fill(0);
+		this.hscore = 0;
+		this.vscore = 0;
+		this.hfinal_score = 0;
+		this.vfinal_score = 0;
+		this.HNotes = "";
+		this.VNotes = "";
+		this.Hpen = "";
+		this.Vpen = "";
+		this.minute = 0;
+		this.registered = false;
+		this.matchId = this.host.name + "_" + this.visitor.name;
+		
+		this.div = document.createElement("div");
+		this.divHst = document.createElement("div");
+		this.divVis = document.createElement("div");
+	}
+	
+	toString = function() {
+		return `${this.host} X ${this.visitor}`;
+	};
+	
+	pen(v){
+		if(v == 1){
+			return "<span style='color:green;font-weight: bold;'>O</span>"
+		}else{
+			return "<span style='color:red;font-weight: bold;'>X</span>"
+		}
+	}
+	
+	computeScore(hostAller = -1, visitorAller = -1){
+		var p_host = this.host.credit;
+		if(this.hostben){
+			p_host *= 1.25;
+		}
+		var p_visitor = this.visitor.credit;
+		var p_end = Math.min(this.visitor.credit, this.host.credit)/2;
+		var end_match = false;
+		
+		while(!end_match){
+			var v = Math.random()*(p_host + p_visitor + p_end);
+			if(v <= p_host){
+				this.host_score[this.getRandomInt(89)] = 1;
+				this.hfinal_score +=1;
+			}else if(v <= p_host + p_visitor){
+				this.visitor_score[this.getRandomInt(89)] = 1;
+				this.vfinal_score += 1
+			}else{
+				end_match = true;
+			}
+			p_end = p_end + Math.min(this.visitor.credit, this.host.credit)/2;
+		}
+
+		var prolongation = this.extra && ((this.hfinal_score == this.vfinal_score && hostAller == -1 && visitorAller == -1 && ! this.hostben) || (hostAller == this.vfinal_score && visitorAller == this.hfinal_score))
+		
+		//extra time
+		//if(this.extra & sum == 0){
+		if(prolongation){
+			var hextra = new Array(30).fill(0);
+			var vextra = new Array(30).fill(0);
+			p_end = p_end + Math.min(this.visitor.credit, this.host.credit)/2;
+			end_match = false;
+			
+			while(!end_match){
+				var v = Math.random()*(p_host + p_visitor + p_end);
+				if(v <= p_host){
+					hextra[this.getRandomInt(29)] = 1;
+					this.hfinal_score +=1;
+				}else if(v <= p_host + p_visitor){
+					vextra[this.getRandomInt(29)] = 1;
+					this.vfinal_score += 1;
+				}else{
+					end_match = true;
+				}
+				p_end = p_end + Math.min(this.visitor.credit, this.host.credit)/2;
+			}
+			
+			this.host_score = this.host_score.concat(hextra);
+			this.visitor_score = this.visitor_score.concat(vextra);
+
+			var penos = ((this.hfinal_score == this.vfinal_score && hostAller == -1 && visitorAller == -1 && ! this.hostben) || (hostAller == this.vfinal_score && visitorAller == this.hfinal_score))
+			
+			//pens
+			if(penos){
+				var sum = 0;
+				var hpen = new Array(5).fill(0);
+				var vpen = new Array(5).fill(0);
+				for(var i = 0; i < hpen.length; i++){
+					if(Math.random() > 0.2){
+						hpen[i] = 1;
+						this.hfinal_score += 1;
+						sum += 1;
+					}
+					if(Math.random() > 0.2){
+						vpen[i] = 1;
+						this.vfinal_score += 1;
+						sum -= 1;
+					}
+				}
+				
+				this.host_score = this.host_score.concat(hpen);
+				this.visitor_score = this.visitor_score.concat(vpen);
+				
+				// if equality after 5 pens.
+				while(sum == 0){
+					var hp = new Array(1).fill(0);
+					var vp = new Array(1).fill(0);
+					if(Math.random() > 0.2){
+						hp[0] = 1;
+						sum += 1
+					}
+					if(Math.random() > 0.2){
+						vp[0] = 1;
+						sum -= 1;
+					}
+					this.host_score = this.host_score.concat(hp);
+					this.visitor_score = this.visitor_score.concat(vp);
+				}
+			}
+		}
+				
+	}
+	
+	updateResult(){
+		if(this.minute < this.host_score.length){
+			this.hscore += this.host_score[this.minute];
+			this.vscore += this.visitor_score[this.minute];
+		}
+		this.dispResults();
+		this.ended = (this.minute == this.host_score.length);
+	}
+	
+	plot(parent){
+		this.div = document.createElement("div");
+		this.div.classList.add("match");
+
+		parent.style.display = "table";
+		this.divHst = document.createElement("div");
+		this.divHst.innerHTML = "";
+		this.divHst.classList.add("score_container");
+		this.divHst.style.float = "left";
+		this.host.display(this.divHst);
+		this.dispScore(this.divHst, this.hscore, this.HNotes);
+		
+		this.divVis = document.createElement("div");
+		this.divVis.innerHTML = ""; 
+		this.divVis.classList.add("score_container");
+		this.divVis.style.float = "right";
+		this.visitor.display(this.divVis);
+		this.dispScore(this.divVis, this.vscore, this.VNotes);
+		
+		parent.appendChild(this.div);
+	}
+	
+	dispResults(){		
+		if(this.minute <= 120){
+			if(this.host_score[this.minute -1] > 0){
+				this.HNotes += this.minute + "' ";
+			}
+			if(this.visitor_score[this.minute -1] > 0){
+				this.VNotes += this.minute + "' ";
+			}
+		}else{
+			this.Hpen += this.pen(this.host_score[this.minute -1]) + " ";
+			this.Vpen += this.pen(this.visitor_score[this.minute -1]) + " ";
+		}
+		
+		document.getElementById("clock").innerHTML = this.minute;
+
+		this.divHst.innerHTML = ""; //ERROR HERE when next step
+		this.divHst.style.float = "left";
+		this.host.display(this.divHst);
+		this.dispScore(this.divHst);
+		
+		
+		this.divVis.innerHTML = ""; 
+		this.visitor.display(this.divVis);
+		this.dispScore(this.divVis);
+		
+		this.div.innerHTML = "";
+		var tbl = document.createElement("table");
+		tbl.style.width = "250px";
+		tbl.style.backgroundColor = "black";
+		this.divHst.style.width = "100px";
+		this.divVis.style.width = "100px";
+		this.divHst.display = "inline-block";
+		this.divVis.display = "inline-block";
+		var btn = "<input type='button' name='btn_play' value='⯈' id= '" + this.matchId + "' style='width:10px;  height:25px;' onclick='play([this.id]);'></input>";
+		tbl.appendChild(table_styled_headers([[this.divHst.innerHTML, this.divHst.style], [btn, "width:20px;display: inline-block;"], [this.divVis.innerHTML, this.divVis.style]]));
+		
+		var scoreStyle = "text-align:center; color:white; font-weight:bold; font-size: 200%;";
+		tbl.appendChild(table_styled_lines([[this.hscore, scoreStyle], [('000' + this.minute).substr(-3), "color:white;"], [this.vscore, scoreStyle]]));
+		
+		var noteStyle = "color:white;width:100px;display: inline-block;";
+		tbl.appendChild(table_styled_lines([[this.HNotes, noteStyle], ["", ""], [this.VNotes, noteStyle]]));
+		
+		var penStyle = "width:100px;display: inline-block;";
+		tbl.appendChild(table_styled_lines([[this.Hpen, penStyle], ["", ""], [this.Vpen, penStyle]]));
+		
+		this.div.appendChild(tbl);
+	}
+	
+	dispScore(parent, score = NaN, Notes = ""){
+		parent.style.backgroundColor = "black";
+		parent.style.color = "white";
+		if(!isNaN(score)){
+			var hs = document.createElement("h2");
+			hs.style.textAlign = "center";
+			hs.innerHTML = score;
+			parent.appendChild(hs);
+		}
+		var nt = document.createElement("h6");
+		nt.innerHTML = Notes;
+		parent.appendChild(nt);
+		return parent;
+	}
+	
+	getRandomInt(max) {
+	  return Math.floor(Math.random() * Math.floor(max));
+	}
+}
+
+/*PoolTeam PTPTPTPTPTPTPTPTPTPTPTPTPTPTPTPTPTPTPTPTPTPTPTPTPTPTPTPTPTPTPTPTPTPTPTPTPTPTPTPTPTPTPTPTPTPTPTPTPTPTPTPTPTPTPTPTPTPTPTPTPTPTPTPTPTPTPTPTPTPTPTPTPTPTPTPTPTPTPTP*/
+
+class poolTeam{
+	constructor(team){
+		this.team = team;
+		this.wins = 0;
+		this.nulls = 0;
+		this.defeats = 0;
+		this.goalFor = 0;
+		this.homeGoals = 0;
+		this.goalAgainst = 0;
+		this.rank = 1;
+	}
+	
+	toString = function() {
+		return `${this.team}`;
+	};
+	
+	playedmatchs(){
+		return this.wins + this.nulls + this.defeats;
+	}
+	points(){
+		return this.wins*3 + this.nulls;
+	}
+	goals(){
+		return this.goalFor - this.goalAgainst;
+	}
+	
+	teamName(){
+		return this.team.name;
+	}
+	
+	teamInfo(){
+		var info = new Array(0);
+		info.push(this.rank);
+		var t = document.createElement("div");
+		this.team.display(t);
+		t.style.width = "170px";
+		info.push(t.innerHTML);
+		
+		info.push(this.playedmatchs());
+		info.push(this.wins);
+		info.push(this.nulls);
+		info.push(this.defeats);
+		info.push(this.goalFor);
+		info.push(this.goalAgainst);
+		info.push(this.goals());
+		info.push("<b>" + this.points() + "</b>");
+		return info
+	}
+	
+	toString(){
+		return this.team.name;
+	}
+}
+
+/*Pool PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP*/
+
+class Pool{
+	constructor(name, tcount, round_trip = true, extraTime = false, qualified = -1, playOff = 1, relegable = 0){
+		this.name = name;
+		this.round_trip = round_trip;
+		this.extraTime = extraTime;
+		this.teams = new Array(0);
+		this.matchs = new Array(0);
+		this.dMatchs = new Array(0);
+		this.currentDay = 0;
+		this.done = false;
+		this.qualified = qualified;
+		if(qualified == -1){
+			this.qualified = Math.floor(tcount/2)
+		}
+		this.playOff = playOff;
+		this.relegable = relegable;
+	}
+	
+	toString = function() {
+		var s = "";
+		for(var i = 0; i < this.teams.length; i++){
+			s += this.teams[i].team + " / ";
+		}
+		return s;
+	};
+	
+	addTeam(t){
+		this.teams.push(new poolTeam(t));
+		this.teams[this.teams.length - 1].rank = this.teams.length;
+	}
+	
+	getRank(n){
+		for(var i = 0; i < this.teams.length; i++){
+			if(this.teams[i].rank == n){
+				return this.teams[i].team;
+			}
+		}
+		return null
+	}
+
+	genMatchTable(){
+		var retour = Array(0);
+		var circle = [...this.teams];
+		if(circle.length % 2 != 0){
+			circle.push(null)
+		}
+
+		do{
+			var j = circle.length - 1;
+			var i = 0;
+			var dayAller = Array(0);
+			var dayRetour = Array(0);
+			while(j > i){
+				if(circle[i] != null && circle[j] != null){
+					var matchall = new Match(circle[i].team, circle[j].team, this.round_trip, this.extraTime); 
+					matchall.computeScore();
+					var matchret = new Match(circle[j].team, circle[i].team, this.round_trip, this.extraTime);
+					matchret.computeScore(matchall.vfinal_score, matchall.hfinal_score);
+
+					if(i % 2 == 0){
+						dayAller.push(matchall);
+						dayRetour.push(matchret);
+					}else{
+						dayAller.push(matchret);
+						dayRetour.push(matchall)
+					}
+				}
+				i += 1;
+				j -= 1;
+			}
+			this.dMatchs.push(dayAller);
+			retour.push(dayRetour);
+
+			var first = circle[0];
+			//console.log("circle", circle, first);
+			circle[0] = circle[circle.length - 1];
+			circle = circle.slice(0, circle.length - 1);
+			circle.unshift(first);
+
+		}while(this.dMatchs.length < circle.length - 1)
+
+		if(this.round_trip){
+			this.dMatchs = this.dMatchs.concat(retour)
+		}
+	}
+	
+	getTeamById(name){
+		for(var i = 0; i < this.teams.length; i++){
+			if(this.teams[i].team.name == name){
+				return this.teams[i];
+			}
+		}
+		return null;
+	}
+	
+	sortMatchs(a, b){
+		var aa = this.getTeamById(a.host.name).playedmatchs() + this.getTeamById(a.visitor.name).playedmatchs()
+		var bb = this.getTeamById(b.host.name).playedmatchs() + this.getTeamById(b.visitor.name).playedmatchs()
+		if(aa <= bb){
+			return -1
+		}else{
+			return 1
+		}
+	}
+	
+	updateCurrentDay(){
+		this.done = true;
+		for(var i = 0; i < this.dMatchs.length; i++){
+			for(var j = 0; j < this.dMatchs[i].length; j++){
+				if(!this.dMatchs[i][j].ended){
+					this.done = false;
+					this.currentDay = i;
+				}
+			}
+		}
+	}
+	
+	getcurrentDay(){
+		return this.currentDay;
+	}
+	
+	plot(parent){
+		parent.innerHTML = "";
+		var pool_container = document.createElement("div");
+		pool_container.style.minHeight = "200px";
+		var pool_id = document.createElement("h4");
+		pool_id.innerHTML = this.name;
+		pool_container.appendChild(pool_id);
+		
+		var current_matchs_container = document.createElement("div");
+		current_matchs_container.style.float = "left";
+		var today_matchs = this.dMatchs[this.getcurrentDay()];
+		if(this.done){
+			var pool_done = document.createElement("p");
+			pool_done.innerHTML = "No more mat ... :(";
+			pool_done.style.float = "left";
+			pool_done.style.marginRight = "20px";
+			pool_container.appendChild(pool_done);
+		}else{
+			for(var i = 0; i < today_matchs.length; i++){
+				today_matchs[i].plot(current_matchs_container);
+				//today_matchs[i].updateResult();
+				today_matchs[i].dispResults();
+			}
+			var nodes = current_matchs_container.childNodes;
+			for(var i=0; i<nodes.length; i++) {
+				if (nodes[i].nodeName.toLowerCase() == 'div') {
+					 nodes[i].style.float = "left";
+				 }
+			}
+			pool_container.appendChild(current_matchs_container);
+		}
+		
+			
+		this.teams = this.teams.sort((a, b) => sorteam(a, b));
+		var tbl = document.createElement("table");
+		tbl.appendChild(table_headers(["Rnk", "Eqp", "Matchs", "wins", "nulls", "defeats", "buts marqués", "buts encaissés", "diff. buts", "points"]));
+		
+		for(var i = 0; i < this.teams.length; i++){
+			this.teams[i].rank = i + 1;
+			var l = table_lines(this.teams[i].teamInfo());
+			if(i < this.qualified){
+				l.style.backgroundColor = "palegreen";
+			}else if(i < this.qualified + this.playOff){
+				l.style.backgroundColor = "LightSalmon";
+			}
+			tbl.appendChild(l);
+		}
+		
+		pool_container.appendChild(tbl);
+		parent.appendChild(pool_container);
+	}
+	
+	toString(){
+		var ret = "";
+		for(var s in this.teams){
+			ret += s.toString() + " ";
+		}
+		return ret;
+	}
+}
+
+/*GROUPING STRATEGY yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy*/
+const GroupingStrategy = {
+	RANDOM:"random",
+	END_TO_END:"end_to_end", /*the first one against the last one ...*/
+	LEVELS_GLOBAL_RANKING:"levels_global_ranking", /*First level is the best ranked teams ...*/
+	LEVELS_LOCAL_RANKING:"levels_local_raning", /*First level is the best ranked teams in the precedent step ...*/
+	LEVELS_GLOBAL_RANKING_OUTERGROUP:"levels_global_ranking_outergroup", /*teams from the same group can't play together*/
+	LEVELS_LOCAL_RANKING_OUTERGROUP:"levels_local_raning_outergroup", /*teams from the same group can't play together*/
+}
+
+/*Step SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS*/
+
+class Step{
+	constructor(name, poolsCount, NbQualifiedBypool = 1, distribution = GroupingStrategy.RANDOM, round_trip = true, extraTime = false, teams = Array(0), playOff = 0, sources = Array(0), sources_type = Array(0)){
+		this.poolsCount = poolsCount;
+		this.distribution = distribution;
+		this.NbQ = NbQualifiedBypool;
+		this.playOff = playOff;
+		this.round_trip = round_trip;
+		this.extraTime = extraTime;
+		this.stepDone = false;
+		this.enabled = true;
+		this.teams = teams;
+		this.name = name;
+		this.pools = Array(this.poolsCount);
+		this.sources = sources;
+		this.sources_type = sources_type;
+	}
+	
+	toString = function() {
+		return `${this.name}`;
+	};
+	
+	updateTeams(){
+		for(var i = 0; i < this.sources.length; i++) {
+		  if(this.sources_type[i] == "playoff"){
+			this.teams = this.teams.concat(this.sources[i].getPlayOff());
+		  }else{
+			this.teams = this.teams.concat(this.sources[i].getQualified());
+			this.sources[i].enabled = false;
+		  }
+		}
+	}
+
+	distribute_levels_protected(global_ranking=true){
+		var poolSize = Math.floor(this.teams.length / this.poolsCount);
+		for(var i = 0; i < this.pools.length; i++){
+			this.pools[i] = new Pool(this.name + "_" + (i+1), poolSize, this.round_trip, this.extraTime, this.NbQ, this.playOff);
+		}
+		var levels = this.teams;
+		if(global_ranking)
+			levels = this.teams.sort((a, b) => sorteamByCredit(a, b));
+		
+		while(levels.length > 0){
+			var level = levels.splice(0, this.pools.length);
+			//console.log(JSON.stringify(level))
+			var arr = new Array(0)
+			for(var level_team in level){
+				var level_team_pools = new Array(0);
+				for (var pl in this.pools){
+					var eligible_pool = true;
+					for(var pl_team in this.pools[pl].teams){
+						//console.log("pool", pl, level[level_team].name, this.pools[pl].teams[pl_team].team.name)
+						//console.log(this.pools[pl].teams[pl_team].team.group, level[level_team].group, this.pools[pl].teams[pl_team].team.group.filter(value => level[level_team].group.includes(value)))
+						if(this.pools[pl].teams[pl_team].team.group.filter(value => level[level_team].group.includes(value)).length > 0){
+							eligible_pool = false;
+							break;
+						}
+					}
+					if(eligible_pool){
+						level_team_pools.push(pl)
+					}
+				}
+				arr.push({"team":level[level_team], "pools":level_team_pools})
+			}
+
+			////console.log(JSON.stringify(arr))
+
+			while(arr.length > 0){
+				//console.log(JSON.stringify(arr))
+				//find team with less choices
+				var min_len = this.pools.length
+				var id = 0;
+				for(var i in arr){
+					if(arr[i]["pools"].length < min_len){
+						min_len = arr[i]["pools"].length;
+						id = i;
+					}
+				}
+				//console.log("id of the less choices team ", id, arr[id]["team"].name, " number of his choices", min_len)
+
+				//find pool for the chosen team
+				var p = arr[id]["pools"][getRandomInt(arr[id]["pools"].length)]
+				console.log("chosen pool ", p, JSON.stringify(arr[id]["team"]))
+				this.pools[p].addTeam(arr[id]["team"]);
+				arr.splice(id, 1);
+				for(var t in arr){
+					//console.log(t, "choices before ", arr[t]["team"].name, arr[t]["pools"])
+					for(var pl in arr[t]["pools"]){
+						if(arr[t]["pools"][pl] == p){
+							arr[t]["pools"].splice(pl, 1);
+						}
+					}
+					//console.log(t, "choices after", arr[t]["team"].name, arr[t]["pools"])
+				}
+				//console.log(arr.length, " ==> ", id, " --> ", p , " :: ", JSON.stringify(arr))
+			}
+		}		
+
+		//console.log(levels.length);
+		//for(p in this.pools)
+			//console.log(this.pools[p]);
+
+		//console.log("Done")
+	}
+	
+	distribute(){
+		this.updateTeams();
+		this.pools = Array(this.poolsCount);
+		var poolSize = Math.floor(this.teams.length / this.poolsCount);
+
+	//END_TO_END:"end_to_end", /*the first one against the last one ...*/
+	//LEVELS_LOCAL_RANKING:"levels_local_raning", /*First level is the best ranked teams in the precedent step ...*/
+		
+		if(this.distribution == GroupingStrategy.RANDOM){
+			for(var i = 0; i < this.pools.length; i++){
+				this.pools[i] = new Pool(this.name + "_" + (i+1), poolSize, this.round_trip, this.extraTime, this.NbQ, this.playOff);
+				for(var k = 0; k < poolSize; k++){
+					var j = getRandomInt(this.teams.length);
+					this.pools[i].addTeam(this.teams[j]);
+					this.teams.splice(j, 1);
+				}
+			}
+			
+			var j = 0;
+			while(this.teams.length > 0){
+				this.pools[j].addTeam(this.teams[0]);
+				this.teams.splice(0, 1);
+				j = (j + 1)%this.pools.length;
+			}
+		}else if(this.distribution == GroupingStrategy.LEVELS_GLOBAL_RANKING){
+			for(var i = 0; i < this.pools.length; i++){
+				this.pools[i] = new Pool(this.name + "_" + (i+1), poolSize, this.round_trip, this.extraTime, this.NbQ, this.playOff);
+			}
+			var levels = this.teams.sort((a, b) => sorteamByCredit(a, b));
+			
+			var level = levels.splice(0, this.pools.length);
+			var l = level.length;
+			while(l > 0){
+				for(var i = 0; i < Math.min(this.pools.length, l); i++){
+					var j = getRandomInt(level.length);
+					this.pools[i].addTeam(level[j]);
+					level.splice(j, 1);
+				}
+				level = levels.splice(0, this.pools.length);
+				l = level.length;
+			}
+		}else if(this.distribution == GroupingStrategy.LEVELS_GLOBAL_RANKING_OUTERGROUP){
+			this.distribute_levels_protected()
+		}else if(this.distribution == GroupingStrategy.LEVELS_LOCAL_RANKING_OUTERGROUP){
+			this.distribute_levels_protected(false)
+		}else{
+			this.pools = Array(0)
+			j = 0;
+			k = this.teams.length -1;
+			while(j < k){
+				var p = new Pool(j+1, poolSize, this.round_trip, this.extraTime, this.NbQ, this.playOff);
+				while(p.teams.length < poolSize){
+					p.addTeam(this.teams[j]);
+					p.addTeam(this.teams[k]);
+					j += 1;
+					k -= 1;
+				}
+				this.pools.push(p);
+			}
+		}
+
+		for(var pl in this.pools){
+			for(var tm in this.pools[pl].teams){
+				this.pools[pl].teams[tm].team.clearTempGroups();
+			}
+		}
+		
+		//console.log("distribute", this.pools[0])
+		for(var i = 0; i < this.pools.length; i++){
+			///////////////////////////
+			//console.log("distribute", this.pools[i])
+			var pool_container = document.createElement("div");
+			var pool_id = document.createElement("h3");
+			pool_id.innerHTML = i + 1;
+			pool_container.appendChild(pool_id);
+			//////////////////////////
+			this.pools[i].genMatchTable();
+			this.pools[i].plot(pool_container);
+			document.getElementById("pool").appendChild(pool_container);
+		}
+	}
+	
+	getQualified(){
+		var teams = Array(0);
+		for(var j = 1; j <= this.NbQ; j++){
+			for(var i = 0; i < this.pools.length; i++){
+				var tm = this.pools[i].getRank(j);
+				tm.group.push("temp_" + this.name + "_" + i);
+				teams.push(tm);
+			}
+		}
+		/**/
+		return teams;
+	}
+	
+	getPlayOff(){
+		var teams = Array(0);
+		for(var j = this.NbQ + 1; j <= this.NbQ + this.playOff; j++){
+			for(var i = 0; i < this.pools.length; i++){
+				var tm = this.pools[i].getRank(j);
+				tm.group.push("temp_" + this.name + "_" + i);
+				teams.push(tm);
+			}
+		}
+		
+		return teams;
+	}
+	
+	plotQualified(parent){
+		for(var i = 0; i < this.pools.length; i++){
+			for(var j = 1; j <= this.NbQ + this.playOff; j++){
+				var teamDom = this.pools[i].getTeamById(this.pools[i].getRank(j)).team.toDom();
+				if(j > this.NbQ){
+					teamDom.style.opacity = 0.5;
+				}
+				parent.appendChild(teamDom);
+			}
+		}
+	}
+	
+}
+
+/*Competition CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC*/
+
+class Competition{
+	constructor(name, steps = Array(0)){
+		this.name = name;
+		this.steps = steps;
+		//this.currentStep = 0;
+		this.done_comp = false;
+		this.activeSteps = Array(0);
+		this.getSteps();
+	}
+	
+	getSteps(){
+		for(var i = 0; i < this.steps.length; i++){
+			const index = this.activeSteps.indexOf(this.steps[i]);
+			if(!this.steps[i].stepDone){
+				var ready = true;
+				for(var j = 0; j < this.steps[i].sources.length; j++){
+					if(!this.steps[i].sources[j].stepDone){
+						ready = false;
+					}
+				}
+				if(ready & (index == -1)){
+					this.steps[i].distribute();
+					this.activeSteps.push(this.steps[i]);
+				}
+			}else{			
+				if (index > -1) {
+				  this.activeSteps.splice(index, 1);
+				}
+			}
+		}
+	}
+	
+	plotCompetition(parent){
+		for(var i = 0; i < this.steps.length; i++){
+			if(this.steps[i].stepDone & this.steps[i].enabled){
+				var sep = document.createElement("h2");
+				sep.style.backgroundColor = "green";
+				sep.innerHTML = this.name + " " + this.steps[i];
+				sep.style.width = "100%";
+				parent.appendChild(sep);
+				var game_over = document.createElement("div");
+				game_over.innerHTML = "GAME OVER";
+				this.steps[i].plotQualified(parent);
+				parent.appendChild(game_over);
+			}
+		}
+		
+		for(var i = 0; i < this.activeSteps.length; i++){
+			var sep = document.createElement("h2");
+			sep.style.backgroundColor = "#A09BD7";
+			sep.innerHTML = this.name + " >> " + this.activeSteps[i];
+			sep.style.width = "100%";
+			parent.appendChild(sep);
+			
+			for(var j = 0; j < this.activeSteps[i].pools.length; j++){
+				var pool_container = document.createElement("div");
+				pool_container.style.backgroundColor = "#E6F3E6";
+				this.activeSteps[i].pools[j].plot(pool_container);
+				parent.appendChild(pool_container);
+			}
+		}
+	}
+}
+
+function table_headers(headers){
+	var lin = document.createElement("tr");
+	for(var i = 0; i < headers.length; i++){
+		var cell = document.createElement("th");
+		cell.innerHTML = headers[i];
+		lin.appendChild(cell);
+	}
+	return lin;
+}
+
+function table_styled_headers(headers){
+	var lin = document.createElement("tr");
+	for(var i = 0; i < headers.length; i++){
+		var cell = document.createElement("th");
+		cell.innerHTML = headers[i][0];
+		cell.style = headers[i][1];
+		lin.appendChild(cell);
+	}
+	return lin;
+}
+
+function table_lines(lines){
+	var lin = document.createElement("tr");
+	for(var i = 0; i < lines.length; i++){
+		var cell = document.createElement("td");
+		cell.innerHTML = lines[i];
+		lin.appendChild(cell);
+	}
+	return lin;
+}
+
+function table_styled_lines(lines){
+	var lin = document.createElement("tr");
+	for(var i = 0; i < lines.length; i++){
+		var cell = document.createElement("td");
+		cell.innerHTML = lines[i][0];
+		cell.style = lines[i][1];
+		lin.appendChild(cell);
+	}
+	return lin;
+}
+
+function getRandomInt(max) {
+	return Math.floor(Math.random() * Math.floor(max));
+}
+
+function plotCompetitions(container=document.getElementById("pool")){
+	if(this.done_comp){
+		container.innerHTML = "GAME OVER";
+	}else{
+		container.innerHTML = "";
+		competition.plotCompetition(container);
+	}
+}
+
+function sorteam(a, b){
+	if(a.points() > b.points()){
+		return -1
+	}else if(a.points() === b.points()){
+		if(a.goals() > b.goals()){
+			return -1
+		}else if(a.goals() === b.goals()){
+			if(a.goalFor > b.goalFor){
+				return -1
+			}else if(a.goalFor === b.goalFor){
+				if(a.homeGoals < b.homeGoals){
+					return -1
+				}else if(a.homeGoals == b.homeGoals){
+					return 0
+				}
+			}
+		}
+	}
+	return 1
+}
+
+function sorteamByCredit(a, b){
+	if(a.credit >= b.credit){
+		return -1
+	}
+	return 1
+}
+
+
+var league = Array(0);
+league.push(new Team(1 ,"Bay. München","FC Bayern München",134.000,"red","red",["GER"]));
+league.push(new Team(2 ,"R.Madrid","Real Madrid CF",127.000,"white","white",["ESP"]));
+league.push(new Team(3 ,"Man City","Manchester City FC",125.000,"skyblue","black",["ENG"]));
+league.push(new Team(4 ,"Barca","FC Barcelona",122.000,"blue","#A50044",["ESP"]));
+league.push(new Team(5 ,"Juve","Juventus",120.000,"white","black",["ITA"]));
+
+league.push(new Team(6 ,"Atl.Madrid","Club Atlético de Madrid",115.000,"red","blue",["ESP"]));
+league.push(new Team(7 ,"PSG","Paris Saint-Germain",113.000,"#004170","#004170",["FRA"]));
+league.push(new Team(8 ,"Man United","Manchester United FC",111.000,"red","white",["ENG"]));
+league.push(new Team(9 ,"Liverpool","Liverpool FC",101.000,"red","red",["ENG"]));
+league.push(new Team(10 ,"Arsenal","Arsenal FC",98.000,"red","white",["ENG"]));
+
+league.push(new Team(11 ,"Sevilla","Sevilla FC",98.000,"white","red",["ESP"]));
+league.push(new Team(12 ,"Chelsea","Chelsea FC",93.000,"blue","blue",["ENG"]));
+league.push(new Team(13 ,"Dortmund","Borussia Dortmund",90.000,"yellow","black",["GER"]));
+league.push(new Team(15 ,"Tottenham","Tottenham Hotspur",88.000,"white","#132257",["ENG"]));
+league.push(new Team(14 ,"Roma","AS Roma",88.000,"#F0BC42","#8E1F2F",["ITA"]));
+
+league.push(new Team(16 ,"Porto","FC Porto",87.000,"white","blue",["POR"]));
+league.push(new Team(17 ,"Ajax","AFC Ajax",82.500,"white","red",["NED"]));
+league.push(new Team(18 ,"Shakhtar Donetsk","FC Shakhtar Donetsk",79.000,"#f0612c","black",["UKR"]));
+league.push(new Team(19 ,"Lyon","Olympique Lyonnais",76.000,"#003a80","#003a80",["FRA"]));
+league.push(new Team(20 ,"Napoli","SSC Napoli",74.000,"skyblue","white",["ITA"]));
+
+league.push(new Team(21 ,"Leipzig","RB Leipzig",66.000,"white","red",["GER"]));
+league.push(new Team(22 ,"Villarreal","Villarreal CF",60.000,"yellow","yellow",["ESP"]));
+league.push(new Team(23 ,"Salzburg","FC Salzburg",59.000,"white","white",["AUT"]));
+league.push(new Team(24 ,"Benfica","SL Benfica",58.000,"#ed1c24","#ed1c24",["POR"]));
+league.push(new Team(25 ,"Leverkusen","Bayer 04 Leverkusen",57.000,"#E32221","#F3E500",["GER"]));
+
+league.push(new Team(26 ,"Inter Milan","FC Internazionale Milano",53.000,"blue","black",["ITA"]));
+league.push(new Team(27 ,"Atalanta","Atalanta BC",50.500,"blue","black",["ITA"]));
+league.push(new Team(28 ,"Zenit","FC Zenit",50.000,"#fcc433","#fcc433",["RUS"]));
+league.push(new Team(29 ,"Basel","FC Basel 1893",49.000,"#e40428","#143a84",["SUI"]));
+league.push(new Team(30 ,"Beşiktaş","Beşiktaş JK",49.000,"black","white",["TUR"]));
+
+league.push(new Team(31 ,"Dyn.Kyiv","FC Dynamo Kyiv",47.000,"#176fc1","#176fc1",["UKR"]));
+league.push(new Team(32 ,"Sporting","Sporting Clube de Portugal",45.500,"green","green",["POR"]));
+league.push(new Team(33 ,"Din.Zagreb","GNK Dinamo Zagreb",44.500,"blue","blue",["CRO"]));
+league.push(new Team(34 ,"Lazio","SS Lazio",44.000,"skyblue","white",["ITA"]));
+league.push(new Team(35 ,"Slav.Praha","SK Slavia Praha",43.500,"red","white",["CZE"]));
+
+league.push(new Team(36 ,"Copenhagen","F.C. Copenhagen",43.500,"#bf2126","white",["DEN"]));
+league.push(new Team(37 ,"Olympiacos","Olympiacos FC",43.000,"white","red",["GRE"]));
+league.push(new Team(39 ,"Valencia","Valencia CF",40.000,"white","black",["ESP"]));
+league.push(new Team(38 ,"CSKA Moskva","PFC CSKA Moskva",40.000,"blue","red",["RUS"]));
+league.push(new Team(40 ,"Monaco","AS Monaco FC",36.000,"white","red",["FRA"]));
+
+league.push(new Team(41 ,"Club Brugge","Club Brugge",35.500,"#0078bf","black",["BEL"]));
+league.push(new Team(44 ,"Schalke","FC Schalke 04",35.000,"blue","white",["GER"]));
+league.push(new Team(43 ,"Braga","SC Braga",35.000,"#c82b20","#868257",["POR"]));
+league.push(new Team(42 ,"Young Boys","BSC Young Boys",35.000,"yellow","black",["SUI"]));
+league.push(new Team(45 ,"Krasnodar","FC Krasnodar",34.500,"green","black",["RUS"]));
+
+league.push(new Team(46 ,"Celtic","Celtic FC",34.000,"white","green",["SCO"]));
+league.push(new Team(47 ,"Viktoria Plzeň","FC Viktoria Plzeň",33.500,"red","blue",["CZE"]));
+league.push(new Team(48 ,"Borussia Mönchen","VfL Borussia Mönchengladbach",33.000,"black","black",["GER"]));
+league.push(new Team(49 ,"Frankfurt","Eintracht Frankfurt",33.000,"red","black",["GER"]));
+league.push(new Team(50 ,"Crvena zvezda","FK Crvena zvezda",32.500,"white","white",["SRB"]));
+
+league.push(new Team(51 ,"Leicester","Leicester City FC",32.000,"blue","blue",["ENG"]));
+league.push(new Team(52 ,"Rangers","Rangers FC",31.250,"blue","white",["SCO"]));
+league.push(new Team(53 ,"AC Milan","AC Milan",31.000,"red","black",["ITA"]));
+league.push(new Team(54 ,"Lokomotiv Moskva","FC Lokomotiv Moskva",31.000,"green","red",["RUS"]));
+league.push(new Team(55 ,"KRC Genk","KRC Genk",30.000,"blue","blue",["BEL"]));
+
+league.push(new Team(56 ,"PSV","PSV Eindhoven",29.000,"white","red",["NED"]));
+league.push(new Team(58 ,"Ludogorets","PFC Ludogorets 1945",28.000,"green","green",["BUL"]));
+league.push(new Team(59 ,"APOEL","APOEL FC",28.000,"blue","yellow",["CYP"]));
+league.push(new Team(57 ,"Marseille","Olympique de Marseille",28.000,"skyblue","skyblue",["FRA"]));
+league.push(new Team(61 ,"Gent","KAA Gent",26.500,"blue","blue",["BEL"]));
+
+league.push(new Team(60 ,"Başakşehir","İstanbul Başakşehir",26.500,"orange","darkblue",["TUR"]));
+league.push(new Team(62 ,"Anderlecht","RSC Anderlecht",25.000,"#4C2484","#E0AA00",["BEL"]));
+league.push(new Team(63 ,"Hoffenheim","TSG 1899 Hoffenheim",23.000,"blue","white",["GER"]));
+league.push(new Team(64 ,"Astana","FC Astana",22.500,"#007b88","007b88",["KAZ"]));
+league.push(new Team(65 ,"Liège","R. Standard de Liège",22.000,"#cf0303","#cf0303",["BEL"]));
+
+league.push(new Team(66 ,"Alkmaar","AZ Alkmaar",21.500,"#fd0000","white",["NED"]));
+league.push(new Team(67 ,"LASK","LASK",21.000,"black","white",["AUT"]));
+league.push(new Team(69 ,"Qarabağ FK","Qarabağ FK",21.000,"black","white",["AZE"]));
+league.push(new Team(68 ,"Feyenoord","Feyenoord",21.000,"#fc0000","black",["NED"]));
+league.push(new Team(70 ,"FCSB","FCSB",21.000,"blue","blue",["ROU"]));
+
+league.push(new Team(71 ,"Maccabi Tel-Aviv","Maccabi Tel-Aviv FC",20.500,"#2A3278","#2A3278",["ISR"]));
+league.push(new Team(72 ,"PAOK","PAOK FC",20.000,"white","black",["GRE"]));
+league.push(new Team(78 ,"AEK Athens","AEK Athens FC",19.500,"yellow","black",["GRE"]));
+league.push(new Team(79 ,"Fenerbahçe","Fenerbahçe SK",19.500,"yellow","#112851",["TUR"]));
+league.push(new Team(85 ,"Bilbao","Athletic Club",19.000,"red","white",["ESP"]));
+
+league.push(new Team(86 ,"Celta Vigo","RC Celta de Vigo",19.000,"skyblue","skyblue",["ESP"]));
+league.push(new Team(87 ,"Rennes","Stade Rennais FC",19.000,"#E03127","black",["FRA"]));
+league.push(new Team(89 ,"Spartak Moskva","FC Spartak Moskva",18.500,"#e51c26","white",["RUS"]));
+league.push(new Team(88 ,"Malmö","Malmö FF",18.500,"#66bbdf","white",["SWE"]));
+league.push(new Team(90 ,"Partizan","FK Partizan",18.000,"black","white",["SRB"]));
+
+league.push(new Team(93 ,"BATE Borisov","FC BATE Borisov",17.500,"yellow","blue",["BLR"]));
+league.push(new Team(92 ,"Sparta Praha","AC Sparta Praha",17.500,"#860321","#860321",["CZE"]));
+league.push(new Team(91 ,"Hapoel Beer-Sheva","Hapoel Beer-Sheva FC",17.500,"#fd0000","#fd0000",["ISR"]));
+league.push(new Team(95 ,"Rapid Wien","SK Rapid Wien",17.000,"green","green",["AUT"]));
+league.push(new Team(81 ,"Sociedad","Real Sociedad de Fútbol",17.000,"#007bc0","white",["ESP"]));
+
+league.push(new Team(94 ,"Molde","Molde FK",17.000,"#023cd8","#023cd8",["NOR"]));
+league.push(new Team(96 ,"Galata","Galatasaray AŞ",17.000,"#ca0000","black",["TUR"]));
+league.push(new Team(98 ,"L.Warszawa","Legia Warszawa",16.500,"green","black",["POL"]));
+league.push(new Team(97 ,"CFR Cluj","CFR 1907 Cluj",16.500,"#650133","black",["ROU"]));
+league.push(new Team(73 ,"Wolvers","Wolverhampton Wanderers FC",16.000,"#FC891C","black",["ENG"]));
+
+league.push(new Team(102 ,"Zorya Luhansk","FC Zorya Luhansk",15.000,"white","red",["UKR"]));
+league.push(new Team(103 ,"Wolfsburg","VfL Wolfsburg",14.500,"#55a826","#55a826",["GER"]));
+league.push(new Team(108 ,"Sheriff Tiraspol","FC Sheriff Tiraspol",14.500,"yellow","yellow",["MDA"]));
+league.push(new Team(109 ,"LOSC Lille","LOSC Lille",14.000,"red","black",["FRA"]));
+league.push(new Team(110 ,"Rosenborg","Rosenborg BK",14.000,"black","black",["NOR"]));
+
+league.push(new Team(111 ,"Rostov","FC Rostov",14.000,"blue","yellow",["RUS"]));
+league.push(new Team(112 ,"Maribor","NK Maribor",14.000,"#4c1f78","yellow",["SVN"]));
+league.push(new Team(115 ,"Rijeka","HNK Rijeka",13.500,"#42BEFD","#42BEFD",["CRO"]));
+league.push(new Team(116 ,"Apollon","Apollon Limassol FC",13.500,"#161a2e","skyblue",["CYP"]));
+league.push(new Team(113 ,"Midtjylland","FC Midtjylland",13.500,"#58095A","#58095A",["DEN"]));
+
+league.push(new Team(114 ,"Ferencvárosi","Ferencvárosi TC",13.500,"green","white",["HUN"]));
+league.push(new Team(80 ,"Granada","Granada CF",13.000,"#e70932","blue",["ESP"]));
+league.push(new Team(117 ,"Nice","OGC Nice",13.000,"#bb1e23","black",["FRA"]));
+league.push(new Team(118 ,"St-Étienne","AS Saint-Étienne",13.000,"green","green",["FRA"]));
+league.push(new Team(119 ,"Zürich","FC Zürich",12.000,"#0060AA","white",["SUI"]));
+
+league.push(new Team(120 ,"Fehérvár","Fehérvár FC",11.500,"#ee0000","#243D59",["HUN"]));
+league.push(new Team(124 ,"Wolfsberger","Wolfsberger AC",11.000,"black","white",["AUT"]));
+league.push(new Team(82 ,"Getafe","Getafe CF",11.000,"#418ED5","#418ED5",["ESP"]));
+league.push(new Team(100 ,"Fiorentina","ACF Fiorentina",11.000,"#492AA0","#492AA0",["ITA"]));
+league.push(new Team(125 ,"Antwerp","Royal Antwerp FC",10.500,"#FC0000","#FC0000",["BEL"]));
+
+league.push(new Team(126 ,"Dundalk","Dundalk FC",10.500,"black","red",["IRL"]));
+league.push(new Team(127 ,"Aus. Wien","FK Austria Wien",10.000,"#3C033C","#3C033C",["AUT"]));
+league.push(new Team(83 ,"Espanyol","RCD Espanyol",10.000,"white","blue",["ESP"]));
+league.push(new Team(84 ,"R. Betis","Real Betis Balompié",10.000,"green","white",["ESP"]));
+league.push(new Team(128 ,"Östersunds","Östersunds FK",10.000,"#B1151B","black",["SWE"]));
+
+league.push(new Team(135 ,"Larnaca","AEK Larnaca FC",9.000,"black","yellow",["CYP"]));
+league.push(new Team(133 ,"Shkëndija","KF Shkëndija",9.000,"#3F0101","black",["MKD"]));
+league.push(new Team(134 ,"Lugano","FC Lugano",9.000,"white","black",["SUI"]));
+league.push(new Team(136 ,"Sūduva","FK Sūduva",8.750,"#D02313","#D02313",["LTU"]));
+league.push(new Team(137 ,"New Sts","The New Saints FC",8.500,"green","white",["WAL"]));
+
+league.push(new Team(140 ,"Zrinjski","HŠK Zrinjski",8.000,"#FD0000","#FD0000",["BIH"]));
+league.push(new Team(139 ,"CSKA-Sofia","PFC CSKA-Sofia",8.000,"#EA1C24","white",["BUL"]));
+league.push(new Team(141 ,"Hajduk Split","HNK Hajduk Split",8.000,"#09419D","#09419D",["CRO"]));
+league.push(new Team(138 ,"Slovan Liberec","FC Slovan Liberec",8.000,"#0000F3","#0000F3",["CZE"]));
+league.push(new Team(142 ,"Dudelange","F91 Dudelange",8.000,"#3F9BB8","white",["LUX"]));
+
+league.push(new Team(130 ,"Vitória","Vitória SC",8.000,"black","black",["POR"]));
+league.push(new Team(143 ,"Astra Giurgiu","FC Astra Giurgiu",8.000,"white","black",["ROU"]));
+league.push(new Team(144 ,"Osmanlıspor","Osmanlıspor",8.000,"#640097","white",["TUR"]));
+league.push(new Team(149 ,"Ljubljana","NK Olimpija Ljubljana",7.750,"green","green",["SVN"]));
+league.push(new Team(153 ,"Aberdeen","Aberdeen FC",7.500,"red","red",["SCO"]));
+
+league.push(new Team(154 ,"Bratislava","ŠK Slovan Bratislava",7.500,"#91C6DD","#91C6DD",["SVK"]));
+league.push(new Team(155 ,"Trnava","FC Spartak Trnava",7.500,"#E61B23","black",["SVK"]));
+league.push(new Team(163 ,"Jablonec","FK Jablonec",7.000,"green","white",["CZE"]));
+league.push(new Team(164 ,"Brøndby","Brøndby IF",7.000,"yellow","blue",["DEN"]));
+league.push(new Team(107 ,"Mainz","1. FSV Mainz 05",7.000,"#BD131D","#BD131D",["GER"]));
+league.push(new Team(165 ,"Konyaspor","Konyaspor",7.000,"green","white",["TUR"]));
+
+league.push(new Team(180 ,"Alashkert","Alashkert FC",6.500,"yellow","back",["ARM"]));
+league.push(new Team(178 ,"Din. Tbilisi","FC Dinamo Tbilisi",6.500,"#051555","#133091",["GEO"]));
+league.push(new Team(177 ,"Budapest Honvéd","Budapest Honvéd FC",6.500,"black","#DE0000",["HUN"]));
+league.push(new Team(179 ,"Vilnius","FK Žalgiris Vilnius",6.500,"green","white",["LTU"]));
+league.push(new Team(182 ,"Sarajevo","FK Sarajevo",6.250,"#4E051F","#4E051F",["BIH"]));
+
+league.push(new Team(183 ,"Flora Tallinn","FC Flora Tallinn",6.250,"green","white",["EST"]));
+league.push(new Team(181 ,"B36 Tórshavn","B36 Tórshavn",6.250,"white","white",["FRO"]));
+league.push(new Team(184 ,"Riteriai","FK Riteriai",6.250,"#CEF700","#CEF700",["LTU"]));
+league.push(new Team(194 ,"Kukësi","FK Kukësi",6.000,"white","blue",["ALB"]));
+league.push(new Team(197 ,"Din. Minsk","FC Dinamo Minsk",6.000,"white","#1F53A9",["BLR"]));
+
+league.push(new Team(193 ,"Osijek","NK Osijek",6.000,"#0D5292","white",["CRO"]));
+league.push(new Team(76 ,"Southampton","Southampton FC",6.000,"red","white",["ENG"]));
+league.push(new Team(123 ,"Bordeaux","FC Girondins de Bordeaux",6.000,"#001A4D","#001A4D",["FRA"]));
+league.push(new Team(192 ,"Almaty","FC Kairat Almaty",6.000,"yellow","black",["KAZ"]));
+league.push(new Team(196 ,"Valletta","Valletta FC",6.000,"white","white",["MLT"]));
+
+league.push(new Team(191 ,"Podgorica","FK Budućnost Podgorica",6.000,"#063169","#063169",["MNE"]));
+league.push(new Team(147 ,"Vitesse","Vitesse",6.000,"yellow","white",["NED"]));
+league.push(new Team(190 ,"Poznań","KKS Lech Poznań",6.000,"#0D7ABC","white",["POL"]));
+league.push(new Team(195 ,"Univ Craiova","Universitatea Craiova",6.000,"#0069AF","#0069AF",["ROU"]));
+league.push(new Team(198 ,"AIK","AIK",6.000,"black","yellow",["SWE"]));
+
+league.push(new Team(200 ,"Lincoln","Lincoln Red Imps FC",5.750,"#BF0202","#BF0202",["GIB"]));
+league.push(new Team(199 ,"Ventspils","FK Ventspils",5.750,"yellow","#25689F",["LVA"]));
+league.push(new Team(217 ,"Gabala","Gabala SC",5.500,"#C42E2F","black",["AZE"]));
+league.push(new Team(212 ,"Nõmme Kalju","Nõmme Kalju FC",5.500,"black","black",["EST"]));
+league.push(new Team(213 ,"HJK Helsinki","HJK Helsinki",5.500,"#024491","white",["FIN"]));
+
+league.push(new Team(211 ,"Vaduz1","FC Vaduz",5.500,"#CC1A35","#CC1A35",["LIE"]));
+league.push(new Team(211 ,"Vaduz2","FC Vaduz",5.500,"blue","#CC1A35",["LIE"]));					/**LIE DOUBLE*/
+league.push(new Team(210 ,"Niederkorn","FC Progrès Niederkorn",5.500,"yellow","black",["LUX"]));
+league.push(new Team(209 ,"Riga","Riga FC",5.500,"#ABDFF2","#ABDFF2",["LVA"]));
+league.push(new Team(213 ,"Viitorul","FC Viitorul",5.500,"#011585","black",["ROU"]));
+league.push(new Team(213 ,"Luzern","FC Luzern",5.500,"blue","blue",["SUI"]));
+
+league.push(new Team(213 ,"Domžale","NK Domžale",5.500,"yelow","yellow",["SVN"]));
+league.push(new Team(173 ,"Olexandriya","FC Olexandriya",5.500,"yellow","black",["UKR"]));
+league.push(new Team(231 ,"Sh. Soligorsk","FC Shakhtyor Soligorsk",5.250,"yellow","yellow",["BLR"]));
+league.push(new Team(228 ,"Klaksvík","KÍ Klaksvík",5.250,"blue","white",["FRO"]));
+league.push(new Team(230 ,"Esch","CS Fola Esch",5.250,"red","blue",["LUX"]));
+
+league.push(new Team(229 ,"Linfield","Linfield FC",5.250,"blue","white",["NIR"]));
+league.push(new Team(244 ,"Ararat","Ararat-Armenia FC",5.000,"white","black",["ARM"]));
+league.push(new Team(248 ,"Neftçi PFK","Neftçi PFK",5.000,"black","white",["AZE"]));
+league.push(new Team(157 ,"Waregem","SV Zulte Waregem",5.000,"red","green",["BEL"]));
+league.push(new Team(246 ,"Din. Brest","FC Dinamo Brest",5.000,"blue","blue",["BLR"]));
+
+league.push(new Team(245 ,"Kuopio","KuPS Kuopio",5.000,"yellow","black",["FIN"]));
+league.push(new Team(104 ,"Hrt. Berlin","Hertha BSC Berlin",5.000,"#0059A4","white",["GER"]));
+league.push(new Team(249 ,"Hafnarfjördur","FH Hafnarfjördur",5.000,"white","black",["ISL"]));
+league.push(new Team(129 ,"Rio Ave","Rio Ave FC",5.000,"green","green",["POR"]));
+league.push(new Team(247 ,"Dunajská Streda","FC DAC 1904 Dunajská Streda",5.000,"yelow","blue",["SVK"]));
+
+league.push(new Team(254 ,"Shamrock Rovers","Shamrock Rovers FC",4.750,"green","white",["IRL"]));
+league.push(new Team(256 ,"Sutjeska","FK Sutjeska",4.750,"blue","white",["MNE"]));
+league.push(new Team(255 ,"Connah","Connah's Quay Nomads FC",4.750,"red","red",["WAL"]));
+league.push(new Team(257 ,"Santa Coloma","FC Santa Coloma",4.500,"#163F6F","white",["AND"]));
+league.push(new Team(258 ,"Pyunik","FC Pyunik",4.500,"red","blue",["ARM"]));
+
+league.push(new Team(160 ,"Graz","SK Sturm Graz",4.500,"black","black",["AUT"]));
+league.push(new Team(259 ,"Cork","Cork City FC",4.500,"green","red",["IRL"]));
+league.push(new Team(250 ,"Maccabi Haifa","Maccabi Haifa FC",4.500,"green","white",["ISR"]));
+league.push(new Team(260 ,"Trenčín","AS Trenčín",4.500,"white","red",["SVK"]));
+league.push(new Team(263 ,"Partizani","FK Partizani",4.250,"red","yellow",["ALB"]));
+
+league.push(new Team(261 ,"Valur","Valur",4.250,"red","white",["ISL"]));
+league.push(new Team(262 ,"Crusaders","Crusaders FC",4.250,"red","black",["NIR"]));
+league.push(new Team(285 ,"Laçi","KF Laçi",4.000,"white","white",["ALB"]));
+league.push(new Team(289 ,"Skënderbeu","KF Skënderbeu",4.000,"red","white",["ALB"]));
+league.push(new Team(224 ,"Boleslav","FK Mladá Boleslav",4.000,"blue","white",["CZE"]));
+
+league.push(new Team(105 ,"Köln","1. FC Köln",4.000,"red","red",["GER"]));
+league.push(new Team(286 ,"Europa","Europa FC",4.000,"green","black",["GIB"]));
+league.push(new Team(251 ,"Beitar Jerusalem","Beitar Jerusalem FC",4.000,"yellow","black",["ISR"]));
+league.push(new Team(101 ,"Sassuolo","US Sassuolo Calcio",4.000,"green","black",["ITA"]));
+league.push(new Team(287 ,"Liepāja","FK Liepāja",4.000,"red","black",["LVA"]));
+
+league.push(new Team(288 ,"Vardar","FK Vardar",4.000,"red","black",["MKD"]));
+league.push(new Team(268 ,"Sarpsborg","Sarpsborg 08 FF",4.000,"blue","white",["NOR"]));
+league.push(new Team(284 ,"Piast Gliwice","Piast Gliwice",4.000,"blue","blue",["POL"]));
+league.push(new Team(185 ,"Sivasspor","Sivasspor",4.000,"red","red",["TUR"]));
+league.push(new Team(174 ,"Mariupol","FC Mariupol",4.000,"orange","blue",["UKR"]));
+
+league.push(new Team(175 ,"Poltava","FC Vorskla Poltava",4.000,"green","green",["UKR"]));
+league.push(new Team(291 ,"Kutaisi","FC Torpedo Kutaisi",3.750,"white","white",["GEO"]));
+league.push(new Team(290 ,"Hibernians","Hibernians FC",3.750,"red","red",["MLT"]));
+league.push(new Team(218 ,"FK Vojvodina","FK Vojvodina",3.750,"white","red",["SRB"]));
+league.push(new Team(278 ,"Plovdiv","PFC Lokomotiv Plovdiv 1926",3.500,"white","black",["BUL"]));
+
+league.push(new Team(280 ,"Levski Sofia","PFC Levski Sofia",3.500,"blue","blue",["BUL"]));
+league.push(new Team(227 ,"LKV Zagreb","NK Lokomotiva Zagreb",3.500,"#1E3780","white",["CRO"]));
+league.push(new Team(206 ,"Omonoia","Omonoia FC",3.500,"green","green",["CYP"]));
+league.push(new Team(201 ,"SønderjyskE","SønderjyskE",3.500,"#ADC3D4","#193E80",["DEN"]));
+league.push(new Team(298 ,"Sachkhere","FC Chikhura Sachkhere",3.500,"#1A65A9","yellow",["GEO"]));
+
+league.push(new Team(237 ,"Aris","Aris Thessaloniki FC",3.500,"yellow","black",["GRE"]));
+league.push(new Team(239 ,"Atromitos","Atromitos FC",3.500,"#012C5A","#012C5A",["GRE"]));
+league.push(new Team(241 ,"Panathinaikos","Panathinaikos FC",3.500,"green","green",["GRE"]));
+league.push(new Team(297 ,"Reykjavík","KR Reykjavík",3.500,"black","black",["ISL"]));
+league.push(new Team(252 ,"Yehuda Tel-Aviv","Bnei Yehuda Tel-Aviv FC",3.500,"#E8571F","black",["ISR"]));
+
+league.push(new Team(296 ,"Drita","KF Drita",3.500,"white","#3D3385",["KOS"]));
+league.push(new Team(299 ,"Titograd","OFK Titograd",3.500,"red","red",["MNE"]));
+league.push(new Team(232 ,"St. Gallen","FC St. Gallen",3.500,"green","green",["SUI"]));
+league.push(new Team(273 ,"Djurgårdens","Djurgårdens IF",3.500,"#6196C8","black",["SWE"]));
+league.push(new Team(276 ,"Norrköping","IFK Norrköping FK",3.500,"#00509A","white",["SWE"]));
+
+league.push(new Team(277 ,"Häcken","BK Häcken",3.500,"yellow","black",["SWE"]));
+league.push(new Team(306 ,"Stjarnan","Stjarnan",3.250,"#2B2F88","white",["ISL"]));
+league.push(new Team(307 ,"Jūrmala","FK Spartaks Jūrmala",3.250,"red","white",["LVA"]));
+league.push(new Team(305 ,"Fiorita","La Fiorita 1967",3.250,"#1D3792","yellow",["SMR"]));
+league.push(new Team(333 ,"Željezničar","FK Željezničar",3.000,"blue","blue",["BIH"]));
+
+league.push(new Team(207 ,"Famagusta","Anorthosis Famagusta FC",3.000,"blue","whie",["CYP"]));
+league.push(new Team(75 ,"Everton","Everton FC",3.000,"blue","white",["ENG"]));
+league.push(new Team(332 ,"Runavík","NSÍ Runavík",3.000,"yellow","yellow",["FRO"]));
+league.push(new Team(328 ,"Saburtalo","FC Saburtalo",3.000,"red","red",["GEO"]));
+league.push(new Team(309 ,"Shymkent","FC Ordabasy Shymkent",3.000,"white","blue",["KAZ"]));
+
+league.push(new Team(329 ,"Petrocub-Hincesti","Petrocub-Hincesti",3.000,"white","black",["MDA"]));
+league.push(new Team(329 ,"Shkupi","FC Shkupi 1927",3.000,"blue","white",["MKD"]));
+league.push(new Team(334 ,"Balzan","Balzan FC",3.000,"red","red",["MLT"]));
+league.push(new Team(146 ,"Utrecht","FC Utrecht",3.000,"white","red",["NED"]));
+league.push(new Team(327 ,"Fiori","SP Tre Fiori",3.000,"blue","yellow",["SMR"]));
+
+league.push(new Team(331 ,"Ružomberok","MFK Ružomberok",3.000,"orange","orange",["SVK"]));
+league.push(new Team(326 ,"Mura","NS Mura",3.000,"black","white",["SVN"]));
+league.push(new Team(274 ,"Göteborg","IFK Göteborg",3.000,"#234995","white",["SWE"]));
+league.push(new Team(187 ,"Trabzonspor","Trabzonspor AŞ",3.000,"#A10827","#00AFDB",["TUR"]));
+league.push(new Team(189 ,"Akhisar","Akhisar Belediyespor",3.000,"green","black",["TUR"]));
+
+league.push(new Team(338 ,"Tirana","KF Tirana",2.750,"white","#1564B0",["ALB"]));
+league.push(new Team(339 ,"Teuta","KF Teuta",2.750,"#193583","#193583",["ALB"]));
+league.push(new Team(343 ,"Široki Brijeg","NK Široki Brijeg",2.750,"blue","blue",["BIH"]));
+league.push(new Team(279 ,"Slavia Sofia","PFC Slavia Sofia",2.750,"white","white",["BUL"]));
+league.push(new Team(342 ,"FC Tallinn","FC Levadia Tallinn",2.750,"green","white",["EST"]));
+
+league.push(new Team(344 ,"Víkingur","Víkingur",2.750,"#231D1F","#BACCDD",["FRO"]));
+league.push(new Team(340 ,"Coleraine","Coleraine FC",2.750,"blue","white",["NIR"]));
+league.push(new Team(341 ,"Penne","SP Tre Penne",2.750,"#0097D0","black",["SMR"]));
+league.push(new Team(348 ,"Engordany","UE Engordany",2.500,"yellow","green",["AND"]));
+league.push(new Team(161 ,"Admira","FC Admira Wacker Mödling",2.500,"red","black",["AUT"]));
+
+league.push(new Team(300 ,"Keşla","Keşla FK",2.500,"white","red",["AZE"]));
+league.push(new Team(156 ,"Charleroi","R. Charleroi SC",2.500,"white","black",["BEL"]));
+league.push(new Team(208 ,"Limassol","AEL Limassol FC",2.500,"yellow","#4F5CA6",["CYP"]));
+league.push(new Team(225 ,"Olomouc","SK Sigma Olomouc",2.500,"#005689","#005689",["CZE"]));
+league.push(new Team(74 ,"Burnley","Burnley FC",2.500,"#61082F","#93D2ED",["ENG"]));
+
+league.push(new Team(122 ,"Strasbourg","Racing Club de Strasbourg Alsace",2.500,"#F7F7F7","white",["FRA"]));
+league.push(new Team(99 ,"Torino","Torino FC",2.500,"#771D1F","white",["ITA"]));
+league.push(new Team(310 ,"Tobol","FC Tobol Kostanay",2.500,"#F7DF00","#55A626",["KAZ"]));
+league.push(new Team(349 ,"Gżira","Gżira United FC",2.500,"#700A0E","#9BC8E8",["MLT"]));
+league.push(new Team(350 ,"Cliftonville","Cliftonville FC",2.500,"red","red",["NIR"]));
+
+league.push(new Team(266 ,"Haugesund","FK Haugesund",2.500,"white","#F7F7F7",["NOR"]));
+league.push(new Team(322 ,"Jagiellonia","Jagiellonia Białystok",2.500,"#0F2421","yellow",["POL"]));
+league.push(new Team(152 ,"Ufa","FC Ufa",2.500,"red","#CED558",["RUS"]));
+league.push(new Team(168 ,"Hibernian","Hibernian FC",2.500,"green","white",["SCO"]));
+league.push(new Team(221 ,"Radnicki","FK Radnicki Niš",2.500,"white","red",["SRB"]));
+
+league.push(new Team(347 ,"Bala","Bala Town FC",2.500,"red","red",["WAL"]));
+league.push(new Team(358 ,"Urartu","FC Urartu",2.250,"orange","#382151",["ARM"]));
+league.push(new Team(354 ,"HB Tórshavn","HB Tórshavn",2.250,"red","black",["FRO"]));
+league.push(new Team(359 ,"Samtredia","FC Samtredia",2.250,"#001792","#001792",["GEO"]));
+league.push(new Team(355 ,"St Joseph","St Joseph FC",2.250,"blue","white",["GIB"]));
+
+league.push(new Team(353 ,"Breidablik","Breidablik",2.250,"#006750","white",["ISL"]));
+league.push(new Team(356 ,"Prishtina","FC Prishtina",2.250,"blue","blue",["KOS"]));
+league.push(new Team(357 ,"Milsami","FC Milsami Orhei",2.250,"blue","white",["MDA"]));
+league.push(new Team(351 ,"Floriana","Floriana FC",2.250,"green","white",["MLT"]));
+league.push(new Team(352 ,"Zeta","FK Zeta",2.250,"blue","blue",["MNE"]));
+
+league.push(new Team(320 ,"Cracovia","MKS Cracovia Kraków",2.250,"red","white",["POL"]));
+league.push(new Team(226 ,"Zlín","FC Zlín",2.000,"yellow","blue",["CZE"]));
+league.push(new Team(204 ,"Nordsjælland","FC Nordsjælland",2.000,"red","yellow",["DEN"]));
+league.push(new Team(364 ,"Narva","JK Narva Trans",2.000,"red","red",["EST"]));
+league.push(new Team(363 ,"Ilves","Ilves Tampere",2.000,"yellow","green",["FIN"]));
+
+league.push(new Team(121 ,"Reims","Stade de Reims",2.000,"red","white",["FRA"]));
+league.push(new Team(360 ,"Tbilisi","FC Locomotive Tbilisi",2.000,"red","red",["GEO"]));
+league.push(new Team(314 ,"Debreceni","Debreceni VSC",2.000,"red","red",["HUN"]));
+league.push(new Team(253 ,"Hapoel Haifa","Hapoel Haifa FC",2.000,"red","black",["ISR"]));
+league.push(new Team(361 ,"Kauno","FK Kauno Žalgiris",2.000,"green","green",["LTU"]));
+
+league.push(new Team(361 ,"RFS","RFS",2.000,"blue","blue",["LVA"]));
+league.push(new Team(145 ,"Willem II","Willem II",2.000,"white","red",["NED"]));
+league.push(new Team(264 ,"Bodø","FK Bodø/Glimt",2.000,"yellow","yellow",["NOR"]));
+league.push(new Team(166 ,"Motherwell","Motherwell FC",2.000,"#F3B42C","#76133D",["SCO"]));
+league.push(new Team(220 ,"FK Čukarički","FK Čukarički",2.000,"white","black",["SRB"]));
+
+league.push(new Team(222 ,"Subotica","FK Spartak Subotica",2.000,"#3C4E9B","white",["SRB"]));
+league.push(new Team(234 ,"Thun","FC Thun",2.000,"red","white",["SUI"]));
+league.push(new Team(335 ,"Celje","NK Celje",2.000,"#3980C7","#3980C7",["SVN"]));
+league.push(new Team(186 ,"Alanyaspor","Alanyaspor",2.000,"orange","orange",["TUR"]));
+league.push(new Team(188 ,"Malatyaspor","Yeni Malatyaspor",2.000,"yellow","#BE040C",["TUR"]));
+
+league.push(new Team(171 ,"Desna","FC Desna Chernihiv",2.000,"#677D48","#677D48",["UKR"]));
+league.push(new Team(171 ,"Kolos","Kolos Kovalivka",2.000,"black","black",["UKR"]));
+league.push(new Team(366 ,"Shirak","FC Shirak",1.750,"orange","white",["ARM"]));
+league.push(new Team(367 ,"J. Esch","AS Jeunesse Esch",1.750,"white","black",["LUX"]));
+league.push(new Team(368 ,"Zaria","FC Zaria Balti",1.750,"red","black",["MDA"]));
+
+league.push(new Team(365 ,"Sileks","FK Sileks",1.750,"#0F288A","red",["MKD"]));
+league.push(new Team(368 ,"Rabotnicki","FK Rabotnicki",1.750,"red","red",["MKD"]));
+league.push(new Team(385 ,"Inter C. Escaldes","Inter Club Escaldes",1.500,"blue","black",["AND"]));
+league.push(new Team(159 ,"Hartberg","TSV Hartberg",1.500,"#1E92C9","#1E92C9",["AUT"]));
+league.push(new Team(162 ,"Altach","SCR Altach",1.500,"white","black",["AUT"]));
+
+league.push(new Team(375 ,"Borac","FK Borac Banja Luka",1.500,"#D2372E","#F7F7F7",["BIH"]));
+league.push(new Team(202 ,"Aarhus","AGF Aarhus",1.500,"white","black",["DEN"]));
+league.push(new Team(203 ,"Esbjerg","Esbjerg fB",1.500,"#006EB6","white",["DEN"]));
+league.push(new Team(77 ,"West Ham","West Ham United FC",1.500,"#2FABDF","white",["ENG"]));
+league.push(new Team(388 ,"Rovaniemi","RoPS Rovaniemi",1.500,"blue","white",["FIN"]));
+
+league.push(new Team(238 ,"Crete","OFI Crete FC",1.500,"white","black",["GRE"]));
+league.push(new Team(240 ,"Asteras","Asteras Tripolis FC",1.500,"#0F4B80","#F7F7F7",["GRE"]));
+league.push(new Team(315 ,"Újpest","Újpest FC",1.500,"#4A2E83","white",["HUN"]));
+league.push(new Team(380 ,"St Patrick","Saint Patrick Athletic FC",1.500,"red","white",["IRL"]));
+league.push(new Team(308 ,"Kaysar","FC Kaysar Kyzylorda",1.500,"red","red",["KAZ"]));
+
+league.push(new Team(311 ,"Irtysh","FC Irtysh Pavlodar",1.500,"#2F2E8B","#2F2E8B",["KAZ"]));
+league.push(new Team(387 ,"Feronikeli","KF Feronikeli",1.500,"green","white",["KOS"]));
+league.push(new Team(372 ,"Differdange","FC Differdange 03",1.500,"red","black",["LUX"]));
+league.push(new Team(385 ,"Sfintul","FC Sfintul Gheorghe Suruceni",1.500,"red","blue",["MDA"]));
+league.push(new Team(381 ,"Renova","KF Renova",1.500,"white","#0399CB",["MKD"]));
+
+league.push(new Team(389 ,"Birkirkara","Birkirkara FC",1.500,"yellow","red",["MLT"]));
+league.push(new Team(265 ,"Viking","Viking FK",1.500,"#061A46","white",["NOR"]));
+league.push(new Team(267 ,"Brann","SK Brann",1.500,"red","red",["NOR"]));
+league.push(new Team(269 ,"Lillestrøm","Lillestrøm SK",1.500,"yellow","black",["NOR"]));
+league.push(new Team(270 ,"Odds","Odds BK",1.500,"black","white",["NOR"]));
+
+league.push(new Team(321 ,"Lechia","KS Lechia Gdańsk",1.500,"green","white",["POL"]));
+league.push(new Team(323 ,"Górnik","Górnik Zabrze",1.500,"white","white",["POL"]));
+league.push(new Team(131 ,"Marítimo","CS Marítimo",1.500,"green","red",["POR"]));
+league.push(new Team(132 ,"Arouca","FC Arouca",1.500,"yellow","blue",["POR"]));
+league.push(new Team(292 ,"Botoşani","FC Botoşani",1.500,"red","red",["ROU"]));
+
+league.push(new Team(150 ,"Dyn. Moscow","FC Dynamo Moscow",1.500,"blue","black",["RUS"]));
+league.push(new Team(151 ,"Arsenal Tula","FC Arsenal Tula",1.500,"red","yellow",["RUS"]));
+league.push(new Team(219 ,"Backa Topola","Backa Topola",1.500,"blue","blue",["SRB"]));
+league.push(new Team(233 ,"Servette","Servette FC",1.500,"#81132A","#81132A",["SUI"]));
+league.push(new Team(236 ,"Grasshopper","Grasshopper Club Zürich",1.500,"#0E6CAD","white",["SUI"]));
+
+league.push(new Team(336 ,"Velenje","NK Rudar Velenje",1.500,"#018E01","black",["SVN"]));
+league.push(new Team(275 ,"Hammarby","Hammarby Fotboll",1.500,"green","white",["SWE"]));
+league.push(new Team(411 ,"Sant Julia","UE Sant Julia",1.250,"#D30811","black",["AND"]));
+league.push(new Team(392 ,"Gandzasar","FC Gandzasar",1.250,"#3C406D","#3C406D",["ARM"]));
+league.push(new Team(376 ,"Radnik","FK Radnik Bijeljina",1.250,"#0164AD","#0164AD",["BIH"]));
+
+league.push(new Team(404 ,"Mariehamn","IFK Mariehamn",1.250,"white","green",["FIN"]));
+league.push(new Team(406 ,"Seinäjoki","SJK Seinäjoki",1.250,"black","#B7AA38",["FIN"]));
+league.push(new Team(398 ,"Batumi","FC Dinamo Batumi",1.250,"#F7F7F7","#F7F7F7",["GEO"]));
+league.push(new Team(379 ,"Derry","Derry City FC",1.250,"red","black",["IRL"]));
+league.push(new Team(393 ,"Jelgava","FK Jelgava",1.250,"#9E2C38","black",["LVA"]));
+
+league.push(new Team(412 ,"Pljevlja","FK Rudar Pljevlja",1.250,"#007EBE","red",["MNE"]));
+league.push(new Team(396 ,"Ballymena","Ballymena United FC",1.250,"#0090C9","#0090C9",["NIR"]));
+league.push(new Team(397 ,"Glenavon","Glenavon FC",1.250,"#E0E0E9","white",["NIR"]));
+league.push(new Team(394 ,"Luftëtari","KS Luftëtari",1.000,"#1D62A0","black",["ALB"]));
+league.push(new Team(390 ,"Noah","FC Noah",1.000,"black","white",["ARM"]));
+
+league.push(new Team(301 ,"Sumqayıt","Sumqayıt FK",1.000,"#6C2F8D","#6C2F8D",["AZE"]));
+league.push(new Team(302 ,"Sabail","Sabail",1.000,"#1A243E","#1A243E",["AZE"]));
+league.push(new Team(158 ,"Oostende","KV Oostende",1.000,"red","green",["BEL"]));
+league.push(new Team(318 ,"Vitebsk","FC Vitebsk",1.000,"#034C9D","white",["BLR"]));
+league.push(new Team(319 ,"Torpedo","FC Torpedo Zhodino",1.000,"white","blue",["BLR"]));
+
+league.push(new Team(281 ,"Botev","PFC Botev Plovdiv",1.000,"yellow","black",["BUL"]));
+league.push(new Team(205 ,"Lyngby","Lyngby BK",1.000,"blue","blue",["DEN"]));
+league.push(new Team(415 ,"Linnameeskond","Paide Linnameeskond",1.000,"#1B71B6","#00284A",["EST"]));
+league.push(new Team(399 ,"Espoo","FC Honka Espoo",1.000,"yellow","black",["FIN"]));
+league.push(new Team(401 ,"Inter Turku","FC Inter Turku",1.000,"#224A99","black",["FIN"]));
+
+league.push(new Team(403 ,"Lahti","FC Lahti",1.000,"black","black",["FIN"]));
+league.push(new Team(106 ,"Freiburg","SC Freiburg",1.000,"red","black",["GER"]));
+league.push(new Team(242 ,"Panionios","Panionios GSS",1.000,"red","blue",["GRE"]));
+league.push(new Team(243 ,"Giannina","PAS Giannina FC",1.000,"blue","white",["GRE"]));
+league.push(new Team(313 ,"Puskás","Puskás Akadémia FC",1.000,"yellow","#0D4C9D",["HUN"]));
+
+league.push(new Team(378 ,"Bohemian","Bohemian FC",1.000,"red","black",["IRL"]));
+league.push(new Team(419 ,"Vestmannaeyjar","ÍBV Vestmannaeyjar",1.000,"white","black",["ISL"]));
+league.push(new Team(413 ,"Gjilani","KF Gjilani",1.000,"red","red",["KOS"]));
+league.push(new Team(370 ,"Stumbras","FC Stumbras",1.000,"#142E48","#142E48",["LTU"]));
+league.push(new Team(373 ,"Petange","Union Titus Petange",1.000,"white","black",["LUX"]));
+
+league.push(new Team(374 ,"Lëtzebuerg","Racing FC Union Lëtzebuerg",1.000,"#94D7F1","white",["LUX"]));
+league.push(new Team(390 ,"Valmiera","FK Valmiera",1.000,"green","black",["LVA"]));
+league.push(new Team(399 ,"Tiraspol","FC Dinamo-Auto Tiraspol",1.000,"#1F4389","#1F4389",["MDA"]));
+league.push(new Team(402 ,"Nisporeni","FC Speranța Nisporeni",1.000,"#258BCC","white",["MDA"]));
+league.push(new Team(382 ,"Skopje","FK Makedonija GP Skopje",1.000,"red","yellow",["MKD"]));
+
+league.push(new Team(382 ,"Pandev","Akademija Pandev",1.000,"white","#00558C",["MKD"]));
+league.push(new Team(410 ,"Sirens","FC Sirens",1.000,"blue","blue",["MLT"]));
+league.push(new Team(415 ,"Iskra","FK Iskra",1.000,"red","white",["MNE"]));
+league.push(new Team(148 ,"Heracles","Heracles Almelo",1.000,"black","white",["NED"]));
+league.push(new Team(395 ,"Glentoran","Glentoran FC",1.000,"green","black",["NIR"]));
+
+league.push(new Team(324 ,"Arka","Arka Gdynia",1.000,"yellow","blue",["POL"]));
+league.push(new Team(325 ,"Lubin","Zagłębie Lubin",1.000,"orange","orange",["POL"]));
+league.push(new Team(293 ,"Bucureşti","FC Dinamo Bucureşti",1.000,"red","red",["ROU"]));
+league.push(new Team(294 ,"Pandurii","CS Pandurii Târgu Jiu",1.000,"#008FD3","white",["ROU"]));
+league.push(new Team(167 ,"Kilmarnock","Kilmarnock FC",1.000,"#0B4694","white",["SCO"]));
+
+league.push(new Team(420 ,"Folgore","SS Folgore",1.000,"yellow","black",["SMR"]));
+league.push(new Team(235 ,"Sion","FC Sion",1.000,"red","red",["SUI"]));
+league.push(new Team(345 ,"Žilina","MŠK Žilina",1.000,"#009A51","#F7D41C",["SVK"]));
+league.push(new Team(176 ,"Ol. Donetsk","FC Olimpik Donetsk",1.000,"#002F5D","#002F5D",["UKR"]));
+league.push(new Team(417 ,"Barry","Barry Town AFC",1.000,"yellow","blue",["WAL"]));
+
+league.push(new Team(426 ,"FCI Tallinn","FCI Tallinn",0.750,"black","black",["EST"]));
+league.push(new Team(337 ,"Gorica","ND Gorica",0.750,"#008FCC","#008FCC",["SVN"]));
+league.push(new Team(427 ,"Sta. Coloma","UE Santa Coloma",0.500,"yellow","black",["AND"]));
+league.push(new Team(303 ,"Zirä","Zirä FK",0.500,"red","red",["AZE"]));
+league.push(new Team(304 ,"Käpäz","Käpäz PFK",0.500,"yellow","#3D53A1",["AZE"]));
+
+league.push(new Team(283 ,"Zagora","PFC Beroe Stara Zagora",0.500,"#00A14E","#00A14E",["BUL"]));
+league.push(new Team(405 ,"Vaasa","VPS Vaasa",0.500,"white","black",["FIN"]));
+league.push(new Team(317 ,"Budapest","MTK Budapest",0.500,"white","blue",["HUN"]));
+league.push(new Team(414 ,"Trepça","KF Trepça’89",0.500,"green","white",["KOS"]));
+league.push(new Team(371 ,"Atlantas","FK Atlantas",0.500,"yellow","#01148A",["LTU"]));
+
+league.push(new Team(407 ,"Dacia","FC Dacia Chisinau",0.500,"yellow","yellow",["MDA"]));
+league.push(new Team(408 ,"Zimbru","FC Zimbru Chisinau",0.500,"yellow","green",["MDA"]));
+league.push(new Team(271 ,"Strømsgodset","Strømsgodset IF",0.500,"#22274C","white",["NOR"]));
+league.push(new Team(295 ,"laşi","CSMS laşi",0.500,"blue","blue",["ROU"]));
+league.push(new Team(170 ,"Midlothian","Heart of Midlothian FC",0.500,"#B05062","white",["SCO"]));
+
+league.push(new Team(418 ,"Cardiff","Cardiff Metropolitan University FC",0.500,"#AE3A42","black",["WAL"]));
+league.push(new Team(421 ,"Cefn","Cefn Druids AFC",0.500,"white","black",["WAL"]));
+league.push(new Team(428 ,"Lusitans","FC Lusitans",0.250,"red","green",["AND"]));
+league.push(new Team(377 ,"Tuzla","FK Sloboda Tuzla",0.250,"red","black",["BIH"]));
+league.push(new Team(282 ,"Dunav","FC Dunav Ruse",0.250,"#0086BF","white",["BUL"]));
+
+league.push(new Team(409 ,"Gori","FC Dila Gori",0.250,"red","red",["GEO"]));
+league.push(new Team(316 ,"Vasas","Vasas FC",0.250,"red","blue",["HUN"]));
+league.push(new Team(312 ,"Aktobe","FC Aktobe",0.250,"red","white",["KAZ"]));
+league.push(new Team(384 ,"Pelister","FK Pelister",0.250,"green","green",["MKD"]));
+league.push(new Team(423 ,"Bokelj","FK Bokelj",0.250,"blue","blue",["MNE"]));
+
+league.push(new Team(272 ,"Stabæk","Stabæk Fotball",0.250,"#002669","black",["NOR"]));
+league.push(new Team(169 ,"St Johnstone","St Johnstone FC",0.250,"blue","white",["SCO"]));
+league.push(new Team(223 ,"Mladost","FK Mladost Lučani",0.250,"#0F8BC7","white",["SRB"]));
+league.push(new Team(346 ,"Myjava","TJ Spartak Myjava",0.250,"black","white",["SVK"]));
+league.push(new Team(422 ,"Bangor","Bangor City FC",0.250,"blue","blue",["WAL"]));
+
+league.push(new Team(423 ,"Llandu.","Llandudno FC",0.250,"white","black",["WAL"]));
+league.push(new Team(425 ,"Víkingur Reykjavík","Víkingur Reykjavík",0.050,"red","black",["ISL"]));
+//league.push(new Team(420 ,"Valletta","Valletta FC",0.050,"white","white",["MLT"]));
+
+
+
+var mmax = league[0].credit;
+var mmin = league[league.length - 1].credit;
+
+var german = Array(0);
+var spanish = Array(0);
+var english = Array(0);
+var italian = Array(0);
+var french = Array(0);
+var portuguese = Array(0);
+var dutch = Array(0);
+
+var austrian = Array(0);
+var russian = Array(0);
+var turkish = Array(0);
+var swiss = Array(0);
+var croitian = Array(0);
+var czech = Array(0);
+var dannish = Array(0);
+var greek = Array(0);
+var belgian = Array(0);
+var scotish = Array(0);
+var serbian = Array(0);
+var bulgarian = Array(0);
+var kazak = Array(0);
+var azari = Array(0);
+var roumanian = Array(0);
+var pals = Array(0);
+var swedish = Array(0);
+var belarusian = Array(0);
+var norwegian = Array(0);
+var polish = Array(0);
+var ukranian = Array(0);
+var moldavian = Array(0);
+var cyprian = Array(0);
+
+var slovinian = Array(0);
+var hungarian = Array(0);
+var irish = Array(0);
+var welsh = Array(0);
+var makadonian = Array(0);
+var luthoanian = Array(0);
+var bosniac = Array(0);
+var luxo = Array(0);
+var slovak = Array(0);
+
+var georgian = Array(0);
+var estonian = Array(0);
+var faros = Array(0);
+var albanian = Array(0);
+var maltise = Array(0);
+var gibraltari = Array(0);
+var latvian = Array(0);
+var finish = Array(0);
+var liechten = Array(0);
+var nirish = Array(0);
+var arminian = Array(0);
+var islandish = Array(0);
+var monti = Array(0);
+var andorian = Array(0);
+var kosovar = Array(0);
+var sammarinese = Array(0);
+
+
+for(var i = 0; i < league.length; i++){
+	league[i].credit = Math.floor(league[i].credit * (league[i].credit - mmin)/(mmax - mmin)) + 50;
+	if(league[i].group.includes("GER")){
+		german.push(league[i]);
+	}else if(league[i].group.includes("ESP")){
+		spanish.push(league[i]);
+	}else if(league[i].group.includes("ENG")){
+		english.push(league[i]);
+	}else if(league[i].group.includes("ITA")){
+		italian.push(league[i]);
+	}else if(league[i].group.includes("FRA")){
+		french.push(league[i]);
+	}else if(league[i].group.includes("POR")){
+		portuguese.push(league[i]);
+	}else if(league[i].group.includes("NED")){
+		dutch.push(league[i]);
+	}else if(league[i].group.includes("AUT")){
+		austrian.push(league[i]);
+	}else if(league[i].group.includes("RUS")){
+		russian.push(league[i]);
+	}else if(league[i].group.includes("TUR")){
+		turkish.push(league[i]);
+	}else if(league[i].group.includes("SUI")){
+		swiss.push(league[i]);
+	}else if(league[i].group.includes("CRO")){
+		croitian.push(league[i]);
+	}else if(league[i].group.includes("CZE")){
+		czech.push(league[i]);
+	}else if(league[i].group.includes("DEN")){
+		dannish.push(league[i]);
+	}else if(league[i].group.includes("GRE")){
+		greek.push(league[i]);
+	}else if(league[i].group.includes("BEL")){
+		belgian.push(league[i]);
+	}else if(league[i].group.includes("SCO")){
+		scotish.push(league[i]);
+	}else if(league[i].group.includes("SRB")){
+		serbian.push(league[i]);
+	}else if(league[i].group.includes("BUL")){
+		bulgarian.push(league[i]);
+	}else if(league[i].group.includes("KAZ")){
+		kazak.push(league[i]);
+	}else if(league[i].group.includes("AZE")){
+		azari.push(league[i]);
+	}else if(league[i].group.includes("ROU")){
+		roumanian.push(league[i]);
+	}else if(league[i].group.includes("ISR")){
+		pals.push(league[i]);
+	}else if(league[i].group.includes("SWE")){
+		swedish.push(league[i]);
+	}else if(league[i].group.includes("BLR")){
+		belarusian.push(league[i]);
+	}else if(league[i].group.includes("NOR")){
+		norwegian.push(league[i]);
+	}else if(league[i].group.includes("POL")){
+		polish.push(league[i]);
+	}else if(league[i].group.includes("UKR")){
+		ukranian.push(league[i]);
+	}else if(league[i].group.includes("MDA")){
+		moldavian.push(league[i]);
+	}else if(league[i].group.includes("CYP")){
+		cyprian.push(league[i]);
+	}else if(league[i].group.includes("SVN")){
+		slovinian.push(league[i]);
+	}else if(league[i].group.includes("HUN")){
+		hungarian.push(league[i]);
+	}else if(league[i].group.includes("IRL")){
+		irish.push(league[i]);
+	}else if(league[i].group.includes("WAL")){
+		welsh.push(league[i]);
+	}else if(league[i].group.includes("MKD")){
+		makadonian.push(league[i]);
+	}else if(league[i].group.includes("LTU")){
+		luthoanian.push(league[i]);
+	}else if(league[i].group.includes("BIH")){
+		bosniac.push(league[i]);
+	}else if(league[i].group.includes("LUX")){
+		luxo.push(league[i]);
+	}else if(league[i].group.includes("SVK")){
+		slovak.push(league[i]);
+	}else if(league[i].group.includes("GEO")){
+		georgian.push(league[i]);
+	}else if(league[i].group.includes("EST")){
+		estonian.push(league[i]);
+	}else if(league[i].group.includes("FRO")){
+		faros.push(league[i]);
+	}else if(league[i].group.includes("ALB")){
+		albanian.push(league[i]);
+	}else if(league[i].group.includes("MLT")){
+		maltise.push(league[i]);
+	}else if(league[i].group.includes("GIB")){
+		gibraltari.push(league[i]);
+	}else if(league[i].group.includes("LVA")){
+		latvian.push(league[i]);
+	}else if(league[i].group.includes("FIN")){
+		finish.push(league[i]);
+	}else if(league[i].group.includes("LIE")){
+		liechten.push(league[i]);
+	}else if(league[i].group.includes("NIR")){
+		nirish.push(league[i]);
+	}else if(league[i].group.includes("ARM")){
+		arminian.push(league[i]);
+	}else if(league[i].group.includes("ISL")){
+		islandish.push(league[i]);
+	}else if(league[i].group.includes("MNE")){
+		monti.push(league[i]);
+	}else if(league[i].group.includes("AND")){
+		andorian.push(league[i]);
+	}else if(league[i].group.includes("KOS")){
+		kosovar.push(league[i]);
+	}else if(league[i].group.includes("SMR")){
+		sammarinese.push(league[i]);
+	}
+}
+
+var Spain = new Step("La Liga", 1, 4, GroupingStrategy.RANDOM, true, false, spanish, 0);
+var England = new Step("Premier League", 1, 4, GroupingStrategy.RANDOM, true, false, english, 0);
+var Germany = new Step("Bundes Liga", 1, 4, GroupingStrategy.RANDOM, true, false, german, 0);
+var Italy = new Step("Calcio", 1, 4, GroupingStrategy.RANDOM, true, false, italian, 0);
+
+var France = new Step("Ligue 1", 1, 3, GroupingStrategy.RANDOM, true, false, french, 0);
+
+var Portugal = new Step("Primeira Liga", 1, 2, GroupingStrategy.RANDOM, true, false, portuguese, 1);
+
+var Russia = new Step("Russia Ligue", 1, 1, GroupingStrategy.RANDOM, true, false, russian, 1);
+var Belgium = new Step("Belgium Ligue", 1, 1, GroupingStrategy.RANDOM, true, false, belgian, 1);
+var Netherlands = new Step("Eredivisie", 1, 1, GroupingStrategy.RANDOM, true, false, dutch, 1);
+
+var Ukrania = new Step("Ukrania Ligue", 1, 1, GroupingStrategy.RANDOM, true, false, ukranian, 1);
+
+var Turkey = new Step("Turkey Ligue", 1, 1, GroupingStrategy.RANDOM, true, false, turkish, 1);
+var Austria = new Step("Austria Ligue", 1, 1, GroupingStrategy.RANDOM, true, false, austrian, 1);
+
+var Denmark = new Step("Denmark Ligue", 1, 1, GroupingStrategy.RANDOM, true, false, dannish, 1);
+var Scotland = new Step("Scotland Ligue", 1, 1, GroupingStrategy.RANDOM, true, false, scotish, 1);
+
+var Czech = new Step("Czech Ligue", 1, 1, GroupingStrategy.RANDOM, true, false, czech, 1);
+var Cyprus = new Step("Cyprus Ligue", 1, 1, GroupingStrategy.RANDOM, true, false, cyprian, 0);
+var Greece = new Step("Greece Ligue", 1, 1, GroupingStrategy.RANDOM, true, false, greek, 0);
+
+var Switzerland = new Step("Swiss Ligue", 1, 1, GroupingStrategy.RANDOM, true, false, swiss, 0);
+var Serbia = new Step("Serbia Ligue", 1, 1, GroupingStrategy.RANDOM, true, false, serbian, 0);
+var Croitia = new Step("Croitia Ligue", 1, 1, GroupingStrategy.RANDOM, true, false, croitian, 0);
+var Sweeden = new Step("Sweeden Ligue", 1, 1, GroupingStrategy.RANDOM, true, false, swedish, 0);
+var Norway = new Step("Norway Ligue", 1, 1, GroupingStrategy.RANDOM, true, false, norwegian, 0);
+var Palestine = new Step("Pals Ligue", 1, 1, GroupingStrategy.RANDOM, true, false, pals, 0);
+var kazakestan = new Step("Kazak Ligue", 1, 1, GroupingStrategy.RANDOM, true, false, kazak, 0);
+var Belarus = new Step("Belarusia Ligue", 1, 1, GroupingStrategy.RANDOM, true, false, belarusian, 0);
+var Azerbaijan = new Step("Azari Ligue", 1, 1, GroupingStrategy.RANDOM, true, false, azari, 0);
+var Bulgaria = new Step("Bulgaria Ligue", 1, 1, GroupingStrategy.RANDOM, true, false, bulgarian, 0);
+var Romania = new Step("Roumania Ligue", 1, 1, GroupingStrategy.RANDOM, true, false, roumanian, 0);
+var Poland = new Step("Poland Ligue", 1, 1, GroupingStrategy.RANDOM, true, false, polish, 0);
+var Slovakia = new Step("Slovakia Ligue", 1, 1, GroupingStrategy.RANDOM, true, false, slovak, 0);
+//var Liechtenstein = new Step("Liechtenstein Ligue", 1, 1, GroupingStrategy.RANDOM, true, false, liechten, 0);
+var Slovenia = new Step("Slovenia Ligue", 1, 1, GroupingStrategy.RANDOM, true, false, slovinian, 0);
+var Hungary = new Step("Hungary Ligue", 1, 1, GroupingStrategy.RANDOM, true, false, hungarian, 0);
+var Luxembourg = new Step("Luxembourg Ligue", 1, 1, GroupingStrategy.RANDOM, true, false, luxo, 0);
+var Lithuania = new Step("Lithuania Ligue", 1, 1, GroupingStrategy.RANDOM, true, false, luthoanian, 0);
+var Armenia = new Step("Armenia Ligue", 1, 1, GroupingStrategy.RANDOM, true, false, arminian, 0);
+var Latvia = new Step("Latvia Ligue", 1, 1, GroupingStrategy.RANDOM, true, false, latvian, 0);
+var Albania = new Step("Albania Ligue", 1, 1, GroupingStrategy.RANDOM, true, false, albanian, 0);
+var Macedonia = new Step("Macedonia Ligue", 1, 1, GroupingStrategy.RANDOM, true, false, makadonian, 0);
+var Bosnia = new Step("Bosnia Ligue", 1, 1, GroupingStrategy.RANDOM, true, false, bosniac, 0);
+var Moldavia = new Step("Moldavia Ligue", 1, 1, GroupingStrategy.RANDOM, true, false, moldavian, 0);
+var Ireland = new Step("Ireland Ligue", 1, 1, GroupingStrategy.RANDOM, true, false, irish, 0);
+var Finland = new Step("Finland Ligue", 1, 1, GroupingStrategy.RANDOM, true, false, finish, 0);
+var Georgia = new Step("Georgia Ligue", 1, 1, GroupingStrategy.RANDOM, true, false, georgian, 0);
+var Malta = new Step("Malta Ligue", 1, 1, GroupingStrategy.RANDOM, true, false, maltise, 0);
+var Iceland = new Step("Iceland Ligue", 1, 1, GroupingStrategy.RANDOM, true, false, islandish, 0);
+var Wales = new Step("Wales Ligue", 1, 1, GroupingStrategy.RANDOM, true, false, welsh, 0);
+var North_Ireland = new Step("North Ireland Ligue", 1, 1, GroupingStrategy.RANDOM, true, false, nirish, 0);
+var Gibraltar = new Step("Gibraltar Ligue", 1, 1, GroupingStrategy.RANDOM, true, false, gibraltari, 0);
+var Montenegro = new Step("Montenegro Ligue", 1, 1, GroupingStrategy.RANDOM, true, false, monti, 0);
+var Estonia = new Step("Estonia Ligue", 1, 1, GroupingStrategy.RANDOM, true, false, estonian, 0);
+
+var Kosovo = new Step("Kosovo Ligue", 1, 1, GroupingStrategy.RANDOM, true, false, kosovar, 0);
+var Faroe = new Step("Faroe Ligue", 1, 1, GroupingStrategy.RANDOM, true, false, faros, 0);
+var Andorra = new Step("Andorra Ligue", 1, 1, GroupingStrategy.RANDOM, true, false, andorian, 0);
+var SanMarino = new Step("SanMarino", 1, 1, GroupingStrategy.RANDOM, true, false, sammarinese, 0);
+
+//-------------------------------------------------------------------------------------
+var pr1 = new Step("Primary round", 2, 1, GroupingStrategy.RANDOM, false, true, [], 0, 
+				[Kosovo, Faroe, Andorra, SanMarino], ["", "", "", ""]);
+var pr2 = new Step("Primary round", 1, 1, GroupingStrategy.RANDOM, false, true, [], 0, 
+				[pr1], [""]);
+//-------------------------------------------------------------------------------------
+var C1 = new Step("C1 round", 17, 1, GroupingStrategy.LEVELS_GLOBAL_RANKING, false, true, [], 0, 
+				[Switzerland, Serbia, Croitia, Sweeden, Norway, 
+				Palestine, kazakestan, Belarus, Azerbaijan, Bulgaria, 
+				Romania, Poland, Slovakia, Slovenia, Hungary, 
+				Luxembourg, Lithuania, Armenia, Latvia, Albania, 
+				Macedonia, Bosnia, Moldavia, Ireland, Finland, 
+				Georgia, Malta, Iceland, Wales, North_Ireland, 
+				Gibraltar, Montenegro, Estonia, pr2], 
+				["", "", "", "", "", 
+				"", "", "", "", "", 
+				"", "", "", "", "", 
+				"", "", "", "", "", 
+				"", "", "", "", "", 
+				"", "", "", "", "", 
+				"", "", "", ""]);
+//-------------------------------------------------------------------------------------
+var C2 = new Step("C2 round", 10, 1, GroupingStrategy.LEVELS_GLOBAL_RANKING, false, true, [], 0, 
+				[Czech, Cyprus, Greece, C1], 
+				["", "", "", ""]);
+
+var L2 = new Step("L2 round", 3, 1, GroupingStrategy.LEVELS_GLOBAL_RANKING, false, true, [], 0, 
+				[Ukrania, Turkey, Austria, Denmark, Scotland, Czech], 
+				["playoff", "playoff", "playoff", "playoff", "playoff", "playoff"]);
+//---------------------------------------------------------------------------------------				
+var C3 = new Step("C3 round", 5, 1, GroupingStrategy.LEVELS_GLOBAL_RANKING, false, true, [], 0, 
+				[C2], 
+				[""]);
+
+var L3 = new Step("L3 round", 3, 1, GroupingStrategy.LEVELS_GLOBAL_RANKING, false, true, [], 0, 
+				[Russia, Belgium, Netherlands, L2], 
+				["playoff", "playoff", "playoff", ""]);
+//---------------------------------------------------------------------------------------				
+var C4 = new Step("C4 round", 4, 1, GroupingStrategy.LEVELS_GLOBAL_RANKING, false, true, [], 0, 
+				[Austria, Denmark, Scotland, C3], 
+				["", "", ""]);
+
+var L4 = new Step("L4 round", 2, 1, GroupingStrategy.LEVELS_GLOBAL_RANKING, false, true, [], 0, 
+				[Portugal, L3], 
+				["playoff", ""]);
+//---------------------------------------------------------------------------------------				
+var group_stage = new Step("Groups", 8, 2, GroupingStrategy.LEVELS_GLOBAL_RANKING_OUTERGROUP, true, false, [], 0, 
+				[Spain, England, Germany, Italy, France, Portugal, Russia, Belgium, Netherlands, Ukrania, Turkey, C4, L4],
+				["", "", "", "", "", "", "", "", "", "", "", "", ""])
+//var group_stage = new Step("g stage", 8, 2, GroupingStrategy.LEVELS_GLOBAL_RANKING_OUTERGROUP, true, false, league.splice(0, 32), 0);
+//---------------------------------------------------------------------------------------				
+var NO_16 = new Step("Nock out 16", 8, 1, GroupingStrategy.LEVELS_LOCAL_RANKING_OUTERGROUP, true, true, [], 0, 
+				[group_stage],
+				["", ])
+//---------------------------------------------------------------------------------------				
+var NO_8 = new Step("Nock out 8", 4, 1, GroupingStrategy.RANDOM, true, true, [], 0, 
+				[NO_16],
+				["", ])
+//---------------------------------------------------------------------------------------				
+var semi_final = new Step("Semi final", 2, 1, GroupingStrategy.RANDOM, true, true, [], 0, 
+				[NO_8],
+				["", ])
+
+//---------------------------------------------------------------------------------------				
+var final = new Step("Final", 1, 1, GroupingStrategy.RANDOM, false, true, [], 0, 
+				[semi_final],
+				["", ])
+
+//var g_stage = league.splice(0, 8)
+//group_stage = new Step("g stage", 8, 2, GroupingStrategy.LEVELS_GLOBAL_RANKING_OUTERGROUP, true, false, league.splice(0, 32), 0);
+/*var competition = new Competition("CL", [semi_final,
+										final]);*/
+
+
+var competition = new Competition("CL", [Spain, England, Germany, Italy,
+											France, 
+											Portugal, 
+											Russia, Belgium, Netherlands,
+											Ukrania,
+											Turkey, Austria,
+											Denmark, Scotland,
+											Czech,
+											Cyprus, Greece,
+											Switzerland, Serbia, Croitia, Sweeden, Norway, Palestine, kazakestan, Belarus, Azerbaijan, Bulgaria, Romania, Poland,
+												Slovakia, Slovenia, Hungary, Luxembourg, Lithuania, Armenia, Latvia, Albania, Macedonia, Bosnia, Moldavia,
+												Ireland, Finland, Georgia, Malta, Iceland, Wales, North_Ireland, Gibraltar, Montenegro, Estonia,
+											Kosovo, Faroe, Andorra, SanMarino,
+										pr1, pr2,
+										C1,
+										C2, L2,
+										C3, L3,
+										C4, L4,
+										group_stage,
+										NO_16,
+										NO_8,
+										semi_final,
+										final]);
+
+var todayMatchs = new Array(0);
+for(var j = 0; j < competition.activeSteps.length; j++){
+	for(var i = 0; i < competition.activeSteps[j].pools.length; i++){
+		todayMatchs = todayMatchs.concat(competition.activeSteps[j].pools[i].dMatchs[0]);
+	}
+}
+
+var w = 1;
+document.getElementById("week").innerHTML = "w-" + w + " (" + todayMatchs.length + " matchs)";
+
+var timer = document.getElementById("timer").value;
+
+var interv = null; //setInterval(plot, 200);
+init(todayMatchs);
+
+function start(){
+	var allMatchs = document.getElementsByName("btn_play");
+	var v = new Array(0);
+	for(var i = 0; i < allMatchs.length; i++){
+		v.push(allMatchs[i].id);
+	}
+	todayMatchs = getTodayMatchsFromArray(v);
+	
+	timer = document.getElementById("timer").value;
+	document.getElementById("btn_start").disabled = true;
+	document.getElementById("btn_next").disabled = true;
+	clearInterval(interv);
+	interv = setInterval(plot, timer);
+}
+
+function next(){
+	document.getElementById("btn_start").disabled = false;
+	document.getElementById("btn_next").disabled = true;
+	
+	document.getElementById("pool").innerHTML = "";
+	for(var k = 0; k < competition.activeSteps.length; k++){
+		var stepDone = true;
+		for(i = 0; i < competition.activeSteps[k].pools.length; i++){
+			if(!competition.activeSteps[k].pools[i].done){
+				stepDone = false;
+				competition.activeSteps[k].pools[i].updateCurrentDay();
+			}
+		}
+		
+		if(stepDone){
+			competition.activeSteps[k].stepDone = true;
+		}
+	}
+	
+	competition.getSteps();
+	for(var k = 0; k < competition.activeSteps.length; k++){
+		for(var i = 0; i < competition.activeSteps[k].pools.length; i++){
+			todayMatchs = todayMatchs.concat(competition.activeSteps[k].pools[i].dMatchs[w]);
+		}
+	}
+	
+	plotCompetitions(document.getElementById("pool"));
+	
+	init(todayMatchs);
+}
+
+function init(m = Array(0)){
+	document.getElementById("week").innerHTML = "w-" + w + " (" + todayMatchs.length + " matchs)";
+	plotCompetitions(document.getElementById("pool"));
+}
+
+function findTeam(name){
+	var h = null
+	for(var j = 0; j < competition.activeSteps.length; j++){
+		for(var i = 0; i < competition.activeSteps[j].pools.length; i++){
+			h = competition.activeSteps[j].pools[i].getTeamById(name);
+			if (h != null){
+				return h;
+			}
+		}
+	}
+	return h;
+}
+
+function play(v){
+	todayMatchs = new Array(0);
+	todayMatchs = getTodayMatchsFromArray(v);
+	clearInterval(interv);
+	interv = setInterval(plot, document.getElementById("timer").value);
+}
+
+function getTodayMatchsFromArray(v){
+	var ret = new Array(0);
+	for(var g = 0; g < competition.activeSteps.length; g++){	
+		for(var h = 0; h < v.length; h++){
+			for(var i = 0; i < competition.activeSteps[g].pools.length; i++){
+				for(var j = 0; j < competition.activeSteps[g].pools[i].dMatchs.length; j++){
+					for(var k = 0; k < competition.activeSteps[g].pools[i].dMatchs[j].length; k++){
+						if(competition.activeSteps[g].pools[i].dMatchs[j][k].matchId === v[h]){
+							if(competition.activeSteps[g].pools[i].dMatchs[j][k].minute < 1){
+								ret.push(competition.activeSteps[g].pools[i].dMatchs[j][k]);
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	return ret
+}
+
+function plot(){
+	var endedmatches = new Array(0);
+	var playingMatchs = todayMatchs.length;
+	if(document.getElementById("NBMatchs").value > 0){
+		playingMatchs = Math.min(todayMatchs.length, document.getElementById("NBMatchs").value);
+	}
+	for(var i = 0; i < playingMatchs; i++){
+		var m = todayMatchs[i];
+		if(!m.ended){
+			m.updateResult();
+			if(!m.ended){
+				m.minute += 1;
+			}
+		}else if( m.ended & !m.registered){
+			endedmatches.push(i);
+			var h = findTeam(m.host.name);
+			var v = findTeam(m.visitor.name);
+			
+			h.goalFor += m.hscore;
+			h.homeGoals += m.hscore;
+			h.goalAgainst += m.vscore;
+			
+			v.goalFor += m.vscore;
+			v.goalAgainst += m.hscore;
+			if(m.hscore > m.vscore){
+				h.wins += 1;
+				v.defeats += 1;
+			}else if(m.hscore < m.vscore){
+				h.defeats += 1;
+				v.wins += 1;
+			}else{
+				h.nulls += 1;
+				v.nulls += 1;
+			}
+			m.registered = true;
+		}
+	}
+	
+	var mid = 0;
+	while(mid < todayMatchs.length){
+		if(todayMatchs[mid].registered){
+			todayMatchs.splice(mid, 1);
+		}else{
+			mid +=1;
+		}
+	}
+	
+	if(todayMatchs.length == 0){
+		clearInterval(interv);
+		document.getElementById("btn_next").disabled = false;
+	}
+}
+</script>
+</body>
+</html>
