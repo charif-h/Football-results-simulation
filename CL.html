@@ -88,13 +88,12 @@ class Team {
 		this.credit = credit;
 		this.shirt = shirt;
 		this.shrt = shrt;
-		this.group = grp
-		this.ended = false;
+		this.groups = grp;
 	}
 
 	/*Each step add a termporary group (number of pool) to the team, this function gets ride of these groups*/
 	clearTempGroups(){
-		this.group = this.group.filter(function(value, index, arr){ 
+		this.groups = this.groups.filter(function(value, index, arr){ 
 			return !value.startsWith("temp_");
 		});
 	}
@@ -103,17 +102,9 @@ class Team {
 		return `${this.name}`;
 	};
 	
-	display(parent, score = 0, notes = ""){
-		this.parent = parent;
-		this.parent.style.width = "120px;"
-		this.parent.appendChild(this.toDom());
-		
-		return this.parent;
-	}
-	
 	toDom(){
 		var domTeam = document.createElement("div");
-		domTeam.title = this.id + "-" + this.fullName + " [" + this.credit + "] " + this.group;
+		domTeam.title = this.id + "-" + this.fullName + " [" + this.credit + "] " + this.groups;
 		
 		//Uniform
 		var uniform = document.createElement("div");
@@ -141,6 +132,14 @@ class Team {
 		domTeam.appendChild(team_name);
 		
 		return domTeam;
+	}
+
+	display(parent, score = 0, notes = ""){
+		this.parent = parent;
+		this.parent.style.width = "120px;"
+		this.parent.appendChild(this.toDom());
+		
+		return this.parent;
 	}
 }
 
@@ -677,8 +676,8 @@ class Step{
 					var eligible_pool = true;
 					for(var pl_team in this.pools[pl].teams){
 						//console.log("pool", pl, level[level_team].name, this.pools[pl].teams[pl_team].team.name)
-						//console.log(this.pools[pl].teams[pl_team].team.group, level[level_team].group, this.pools[pl].teams[pl_team].team.group.filter(value => level[level_team].group.includes(value)))
-						if(this.pools[pl].teams[pl_team].team.group.filter(value => level[level_team].group.includes(value)).length > 0){
+						//console.log(this.pools[pl].teams[pl_team].team.groups, level[level_team].groups, this.pools[pl].teams[pl_team].team.groups.filter(value => level[level_team].groups.includes(value)))
+						if(this.pools[pl].teams[pl_team].team.groups.filter(value => level[level_team].groups.includes(value)).length > 0){
 							eligible_pool = false;
 							break;
 						}
@@ -817,7 +816,7 @@ class Step{
 		for(var j = 1; j <= this.NbQ; j++){
 			for(var i = 0; i < this.pools.length; i++){
 				var tm = this.pools[i].getRank(j);
-				tm.group.push("temp_" + this.name + "_" + i);
+				tm.groups.push("temp_" + this.name + "_" + i);
 				teams.push(tm);
 			}
 		}
@@ -830,7 +829,7 @@ class Step{
 		for(var j = this.NbQ + 1; j <= this.NbQ + this.playOff; j++){
 			for(var i = 0; i < this.pools.length; i++){
 				var tm = this.pools[i].getRank(j);
-				tm.group.push("temp_" + this.name + "_" + i);
+				tm.groups.push("temp_" + this.name + "_" + i);
 				teams.push(tm);
 			}
 		}
@@ -1586,115 +1585,115 @@ var sammarinese = Array(0);
 
 for(var i = 0; i < league.length; i++){
 	league[i].credit = Math.floor(league[i].credit * (league[i].credit - mmin)/(mmax - mmin)) + 50;
-	if(league[i].group.includes("GER")){
+	if(league[i].groups.includes("GER")){
 		german.push(league[i]);
-	}else if(league[i].group.includes("ESP")){
+	}else if(league[i].groups.includes("ESP")){
 		spanish.push(league[i]);
-	}else if(league[i].group.includes("ENG")){
+	}else if(league[i].groups.includes("ENG")){
 		english.push(league[i]);
-	}else if(league[i].group.includes("ITA")){
+	}else if(league[i].groups.includes("ITA")){
 		italian.push(league[i]);
-	}else if(league[i].group.includes("FRA")){
+	}else if(league[i].groups.includes("FRA")){
 		french.push(league[i]);
-	}else if(league[i].group.includes("POR")){
+	}else if(league[i].groups.includes("POR")){
 		portuguese.push(league[i]);
-	}else if(league[i].group.includes("NED")){
+	}else if(league[i].groups.includes("NED")){
 		dutch.push(league[i]);
-	}else if(league[i].group.includes("AUT")){
+	}else if(league[i].groups.includes("AUT")){
 		austrian.push(league[i]);
-	}else if(league[i].group.includes("RUS")){
+	}else if(league[i].groups.includes("RUS")){
 		russian.push(league[i]);
-	}else if(league[i].group.includes("TUR")){
+	}else if(league[i].groups.includes("TUR")){
 		turkish.push(league[i]);
-	}else if(league[i].group.includes("SUI")){
+	}else if(league[i].groups.includes("SUI")){
 		swiss.push(league[i]);
-	}else if(league[i].group.includes("CRO")){
+	}else if(league[i].groups.includes("CRO")){
 		croitian.push(league[i]);
-	}else if(league[i].group.includes("CZE")){
+	}else if(league[i].groups.includes("CZE")){
 		czech.push(league[i]);
-	}else if(league[i].group.includes("DEN")){
+	}else if(league[i].groups.includes("DEN")){
 		dannish.push(league[i]);
-	}else if(league[i].group.includes("GRE")){
+	}else if(league[i].groups.includes("GRE")){
 		greek.push(league[i]);
-	}else if(league[i].group.includes("BEL")){
+	}else if(league[i].groups.includes("BEL")){
 		belgian.push(league[i]);
-	}else if(league[i].group.includes("SCO")){
+	}else if(league[i].groups.includes("SCO")){
 		scotish.push(league[i]);
-	}else if(league[i].group.includes("SRB")){
+	}else if(league[i].groups.includes("SRB")){
 		serbian.push(league[i]);
-	}else if(league[i].group.includes("BUL")){
+	}else if(league[i].groups.includes("BUL")){
 		bulgarian.push(league[i]);
-	}else if(league[i].group.includes("KAZ")){
+	}else if(league[i].groups.includes("KAZ")){
 		kazak.push(league[i]);
-	}else if(league[i].group.includes("AZE")){
+	}else if(league[i].groups.includes("AZE")){
 		azari.push(league[i]);
-	}else if(league[i].group.includes("ROU")){
+	}else if(league[i].groups.includes("ROU")){
 		roumanian.push(league[i]);
-	}else if(league[i].group.includes("ISR")){
+	}else if(league[i].groups.includes("ISR")){
 		pals.push(league[i]);
-	}else if(league[i].group.includes("SWE")){
+	}else if(league[i].groups.includes("SWE")){
 		swedish.push(league[i]);
-	}else if(league[i].group.includes("BLR")){
+	}else if(league[i].groups.includes("BLR")){
 		belarusian.push(league[i]);
-	}else if(league[i].group.includes("NOR")){
+	}else if(league[i].groups.includes("NOR")){
 		norwegian.push(league[i]);
-	}else if(league[i].group.includes("POL")){
+	}else if(league[i].groups.includes("POL")){
 		polish.push(league[i]);
-	}else if(league[i].group.includes("UKR")){
+	}else if(league[i].groups.includes("UKR")){
 		ukranian.push(league[i]);
-	}else if(league[i].group.includes("MDA")){
+	}else if(league[i].groups.includes("MDA")){
 		moldavian.push(league[i]);
-	}else if(league[i].group.includes("CYP")){
+	}else if(league[i].groups.includes("CYP")){
 		cyprian.push(league[i]);
-	}else if(league[i].group.includes("SVN")){
+	}else if(league[i].groups.includes("SVN")){
 		slovinian.push(league[i]);
-	}else if(league[i].group.includes("HUN")){
+	}else if(league[i].groups.includes("HUN")){
 		hungarian.push(league[i]);
-	}else if(league[i].group.includes("IRL")){
+	}else if(league[i].groups.includes("IRL")){
 		irish.push(league[i]);
-	}else if(league[i].group.includes("WAL")){
+	}else if(league[i].groups.includes("WAL")){
 		welsh.push(league[i]);
-	}else if(league[i].group.includes("MKD")){
+	}else if(league[i].groups.includes("MKD")){
 		makadonian.push(league[i]);
-	}else if(league[i].group.includes("LTU")){
+	}else if(league[i].groups.includes("LTU")){
 		luthoanian.push(league[i]);
-	}else if(league[i].group.includes("BIH")){
+	}else if(league[i].groups.includes("BIH")){
 		bosniac.push(league[i]);
-	}else if(league[i].group.includes("LUX")){
+	}else if(league[i].groups.includes("LUX")){
 		luxo.push(league[i]);
-	}else if(league[i].group.includes("SVK")){
+	}else if(league[i].groups.includes("SVK")){
 		slovak.push(league[i]);
-	}else if(league[i].group.includes("GEO")){
+	}else if(league[i].groups.includes("GEO")){
 		georgian.push(league[i]);
-	}else if(league[i].group.includes("EST")){
+	}else if(league[i].groups.includes("EST")){
 		estonian.push(league[i]);
-	}else if(league[i].group.includes("FRO")){
+	}else if(league[i].groups.includes("FRO")){
 		faros.push(league[i]);
-	}else if(league[i].group.includes("ALB")){
+	}else if(league[i].groups.includes("ALB")){
 		albanian.push(league[i]);
-	}else if(league[i].group.includes("MLT")){
+	}else if(league[i].groups.includes("MLT")){
 		maltise.push(league[i]);
-	}else if(league[i].group.includes("GIB")){
+	}else if(league[i].groups.includes("GIB")){
 		gibraltari.push(league[i]);
-	}else if(league[i].group.includes("LVA")){
+	}else if(league[i].groups.includes("LVA")){
 		latvian.push(league[i]);
-	}else if(league[i].group.includes("FIN")){
+	}else if(league[i].groups.includes("FIN")){
 		finish.push(league[i]);
-	}else if(league[i].group.includes("LIE")){
+	}else if(league[i].groups.includes("LIE")){
 		liechten.push(league[i]);
-	}else if(league[i].group.includes("NIR")){
+	}else if(league[i].groups.includes("NIR")){
 		nirish.push(league[i]);
-	}else if(league[i].group.includes("ARM")){
+	}else if(league[i].groups.includes("ARM")){
 		arminian.push(league[i]);
-	}else if(league[i].group.includes("ISL")){
+	}else if(league[i].groups.includes("ISL")){
 		islandish.push(league[i]);
-	}else if(league[i].group.includes("MNE")){
+	}else if(league[i].groups.includes("MNE")){
 		monti.push(league[i]);
-	}else if(league[i].group.includes("AND")){
+	}else if(league[i].groups.includes("AND")){
 		andorian.push(league[i]);
-	}else if(league[i].group.includes("KOS")){
+	}else if(league[i].groups.includes("KOS")){
 		kosovar.push(league[i]);
-	}else if(league[i].group.includes("SMR")){
+	}else if(league[i].groups.includes("SMR")){
 		sammarinese.push(league[i]);
 	}
 }
