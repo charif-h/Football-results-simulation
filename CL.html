@@ -145,10 +145,10 @@ class Team {
 
 /*Match MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM*/
 class Match {
-	constructor(team1, team2, hostben = true, extra = false){
+	constructor(team1, team2, HandW = true, extra = false){
 		this.host = team1;
 		this.visitor = team2;
-		this.hostben = hostben;
+		this.HandW = HandW;
 		this.extra = extra;
 		this.host_score = new Array(90).fill(0);
 		this.visitor_score = new Array(90).fill(0);
@@ -183,7 +183,7 @@ class Match {
 	
 	computeScore(hostAller = -1, visitorAller = -1){
 		var p_host = this.host.credit;
-		if(this.hostben){
+		if(this.HandW){
 			p_host *= 1.25;
 		}
 		var p_visitor = this.visitor.credit;
@@ -204,7 +204,7 @@ class Match {
 			p_end = p_end + Math.min(this.visitor.credit, this.host.credit)/2;
 		}
 
-		var prolongation = this.extra && ((this.hfinal_score == this.vfinal_score && hostAller == -1 && visitorAller == -1 && ! this.hostben) || (hostAller == this.vfinal_score && visitorAller == this.hfinal_score))
+		var prolongation = this.extra && ((this.hfinal_score == this.vfinal_score && hostAller == -1 && visitorAller == -1 && ! this.HandW) || (hostAller == this.vfinal_score && visitorAller == this.hfinal_score))
 		
 		//extra time
 		//if(this.extra & sum == 0){
@@ -231,7 +231,7 @@ class Match {
 			this.host_score = this.host_score.concat(hextra);
 			this.visitor_score = this.visitor_score.concat(vextra);
 
-			var penos = ((this.hfinal_score == this.vfinal_score && hostAller == -1 && visitorAller == -1 && ! this.hostben) || (hostAller == this.vfinal_score && visitorAller == this.hfinal_score))
+			var penos = ((this.hfinal_score == this.vfinal_score && hostAller == -1 && visitorAller == -1 && ! this.HandW) || (hostAller == this.vfinal_score && visitorAller == this.hfinal_score))
 			
 			//pens
 			if(penos){
