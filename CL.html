@@ -133,14 +133,6 @@ class Team {
 		
 		return domTeam;
 	}
-
-	display(parent, score = 0, notes = ""){
-		this.parent = parent;
-		this.parent.style.width = "120px;"
-		this.parent.appendChild(this.toDom());
-		
-		return this.parent;
-	}
 }
 
 /*Match MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM*/
@@ -150,8 +142,10 @@ class Match {
 		this.visitor = team2;
 		this.HandW = HandW;
 		this.extra = extra;
-		this.host_score = new Array(90).fill(0);
-		this.visitor_score = new Array(90).fill(0);
+		
+		this.host_moments = Array(0);
+		this.visitor_moments = Array(0);
+		this.endsAt = 90;
 		this.hscore = 0;
 		this.vscore = 0;
 		this.hfinal_score = 0;
@@ -173,101 +167,90 @@ class Match {
 		return `${this.host} X ${this.visitor}`;
 	};
 	
+	/*plot green O if the penality is in, and red X if the penality is out*/
 	pen(v){
-		if(v == 1){
+		if(v){
 			return "<span style='color:green;font-weight: bold;'>O</span>"
 		}else{
 			return "<span style='color:red;font-weight: bold;'>X</span>"
 		}
 	}
+
+	/*Simulation of number of goals by team (according to the credit/strenght/ of the team) within a given number of minutes).
+		Then distributing that number randomly on the duration*/
+	scoring(p_host, p_visitor, start=0, end=90){
+		var p_end = Math.min(this.visitor.credit, this.host.credit)/(2-(start/120));
+		var end_match = false;	
+
+		var minutesBucket = [];
+		for (var i=start; i<end; i++) {
+			minutesBucket.push(i);
+		}
+
+		while(!end_match){
+			var v = Math.random()*(p_host + p_visitor + p_end);
+			if(v <= p_host){
+				this.host_moments.push(minutesBucket.splice(this.getRandomInt(minutesBucket.length), 1)[0]);
+			}else if(v <= p_host + p_visitor){
+				this.visitor_moments.push(minutesBucket.splice(this.getRandomInt(minutesBucket.length), 1)[0]);
+			}else{
+				end_match = true;
+			}
+			p_end = p_end + Math.min(this.visitor.credit, this.host.credit)/(2-(start/120));
+		}
+
+		this.hfinal_score = this.host_moments.length;
+		this.vfinal_score = this.visitor_moments.length;
+	}
 	
+	/*Generate the number of goals by team using the method scoring, then decide if extra time is needed, then if penalities are needed in case of equality*/
 	computeScore(hostAller = -1, visitorAller = -1){
 		var p_host = this.host.credit;
 		if(this.HandW){
 			p_host *= 1.25;
 		}
 		var p_visitor = this.visitor.credit;
-		var p_end = Math.min(this.visitor.credit, this.host.credit)/2;
-		var end_match = false;
-		
-		while(!end_match){
-			var v = Math.random()*(p_host + p_visitor + p_end);
-			if(v <= p_host){
-				this.host_score[this.getRandomInt(89)] = 1;
-				this.hfinal_score +=1;
-			}else if(v <= p_host + p_visitor){
-				this.visitor_score[this.getRandomInt(89)] = 1;
-				this.vfinal_score += 1
-			}else{
-				end_match = true;
-			}
-			p_end = p_end + Math.min(this.visitor.credit, this.host.credit)/2;
-		}
+		this.scoring(p_host, p_visitor);
 
 		var prolongation = this.extra && ((this.hfinal_score == this.vfinal_score && hostAller == -1 && visitorAller == -1 && ! this.HandW) || (hostAller == this.vfinal_score && visitorAller == this.hfinal_score))
 		
 		//extra time
-		//if(this.extra & sum == 0){
 		if(prolongation){
-			var hextra = new Array(30).fill(0);
-			var vextra = new Array(30).fill(0);
-			p_end = p_end + Math.min(this.visitor.credit, this.host.credit)/2;
-			end_match = false;
-			
-			while(!end_match){
-				var v = Math.random()*(p_host + p_visitor + p_end);
-				if(v <= p_host){
-					hextra[this.getRandomInt(29)] = 1;
-					this.hfinal_score +=1;
-				}else if(v <= p_host + p_visitor){
-					vextra[this.getRandomInt(29)] = 1;
-					this.vfinal_score += 1;
-				}else{
-					end_match = true;
-				}
-				p_end = p_end + Math.min(this.visitor.credit, this.host.credit)/2;
-			}
-			
-			this.host_score = this.host_score.concat(hextra);
-			this.visitor_score = this.visitor_score.concat(vextra);
+			this.endsAt = 120;
+			this.scoring(p_host, p_visitor, 91, 120);
 
 			var penos = ((this.hfinal_score == this.vfinal_score && hostAller == -1 && visitorAller == -1 && ! this.HandW) || (hostAller == this.vfinal_score && visitorAller == this.hfinal_score))
 			
 			//pens
 			if(penos){
+				this.endsAt = 125;
 				var sum = 0;
-				var hpen = new Array(5).fill(0);
-				var vpen = new Array(5).fill(0);
-				for(var i = 0; i < hpen.length; i++){
+				for(var i = 1; i <= 5; i++){
 					if(Math.random() > 0.2){
-						hpen[i] = 1;
+						this.host_moments.push(120 + i);
 						this.hfinal_score += 1;
 						sum += 1;
 					}
 					if(Math.random() > 0.2){
-						vpen[i] = 1;
+						this.visitor_moments.push(120 + i);
 						this.vfinal_score += 1;
 						sum -= 1;
 					}
 				}
 				
-				this.host_score = this.host_score.concat(hpen);
-				this.visitor_score = this.visitor_score.concat(vpen);
-				
 				// if equality after 5 pens.
+				var m = 126
 				while(sum == 0){
-					var hp = new Array(1).fill(0);
-					var vp = new Array(1).fill(0);
+					this.endsAt = m;
 					if(Math.random() > 0.2){
-						hp[0] = 1;
+						this.host_moments.push(m);
 						sum += 1
 					}
 					if(Math.random() > 0.2){
-						vp[0] = 1;
+						this.visitor_moments.push(m);
 						sum -= 1;
 					}
-					this.host_score = this.host_score.concat(hp);
-					this.visitor_score = this.visitor_score.concat(vp);
+					m += 1;
 				}
 			}
 		}
@@ -275,12 +258,8 @@ class Match {
 	}
 	
 	updateResult(){
-		if(this.minute < this.host_score.length){
-			this.hscore += this.host_score[this.minute];
-			this.vscore += this.visitor_score[this.minute];
-		}
 		this.dispResults();
-		this.ended = (this.minute == this.host_score.length);
+		this.ended = (this.minute == this.endsAt);
 	}
 	
 	plot(parent){
@@ -292,14 +271,14 @@ class Match {
 		this.divHst.innerHTML = "";
 		this.divHst.classList.add("score_container");
 		this.divHst.style.float = "left";
-		this.host.display(this.divHst);
+		this.divHst.appendChild(this.host.toDom());
 		this.dispScore(this.divHst, this.hscore, this.HNotes);
 		
 		this.divVis = document.createElement("div");
 		this.divVis.innerHTML = ""; 
 		this.divVis.classList.add("score_container");
 		this.divVis.style.float = "right";
-		this.visitor.display(this.divVis);
+		this.divVis.appendChild(this.visitor.toDom());
 		this.dispScore(this.divVis, this.vscore, this.VNotes);
 		
 		parent.appendChild(this.div);
@@ -307,27 +286,34 @@ class Match {
 	
 	dispResults(){		
 		if(this.minute <= 120){
-			if(this.host_score[this.minute -1] > 0){
-				this.HNotes += this.minute + "' ";
+			var H = this.host_moments.filter(v => v <= this.minute).sort((a, b) => a - b);
+			this.HNotes = ""
+			for(var h in H){
+				this.HNotes += H[h] + "' ";
 			}
-			if(this.visitor_score[this.minute -1] > 0){
-				this.VNotes += this.minute + "' ";
+			this.hscore = H.length;
+
+			var V = this.visitor_moments.filter(v => v <= this.minute).sort((a, b) => a - b);
+			this.VNotes = "";
+			for(var v in V){
+				this.VNotes += V[v] + "' ";
 			}
+			this.vscore = V.length;
 		}else{
-			this.Hpen += this.pen(this.host_score[this.minute -1]) + " ";
-			this.Vpen += this.pen(this.visitor_score[this.minute -1]) + " ";
+			this.Hpen += this.pen(this.host_moments.includes(this.minute)) + " ";
+			this.Vpen += this.pen(this.visitor_moments.includes(this.minute)) + " ";
 		}
 		
 		document.getElementById("clock").innerHTML = this.minute;
 
 		this.divHst.innerHTML = ""; //ERROR HERE when next step
 		this.divHst.style.float = "left";
-		this.host.display(this.divHst);
+		this.divHst.appendChild(this.host.toDom());
 		this.dispScore(this.divHst);
 		
 		
 		this.divVis.innerHTML = ""; 
-		this.visitor.display(this.divVis);
+		this.divVis.appendChild(this.visitor.toDom());
 		this.dispScore(this.divVis);
 		
 		this.div.innerHTML = "";
@@ -409,7 +395,7 @@ class poolTeam{
 		var info = new Array(0);
 		info.push(this.rank);
 		var t = document.createElement("div");
-		this.team.display(t);
+		t.appendChild(this.team.toDom());
 		t.style.width = "170px";
 		info.push(t.innerHTML);
 		

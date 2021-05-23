@@ -27,7 +27,7 @@ In this exemple we add a new club team where the short name is *Bay*, the full n
 For some reasons we can attribute the team to termporary groups. This function allows to remove all termporary groups from the team.
 
 #### ToDom
-ToDom and display allow to plot the team within an html element called *parent*.
+ToDom method allows to plot the team within an html element.
 
 ## The class Match
 This class represents a match between two teams.
