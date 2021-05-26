@@ -146,14 +146,9 @@ class Match {
 		this.host_moments = Array(0);
 		this.visitor_moments = Array(0);
 		this.endsAt = 90;
-		this.hscore = 0;
-		this.vscore = 0;
+		this.winner = null;
 		this.hfinal_score = 0;
 		this.vfinal_score = 0;
-		this.HNotes = "";
-		this.VNotes = "";
-		this.Hpen = "";
-		this.Vpen = "";
 		this.minute = 0;
 		this.registered = false;
 		this.matchId = this.host.name + "_" + this.visitor.name;
@@ -237,6 +232,8 @@ class Match {
 						sum -= 1;
 					}
 				}
+
+				this.winner = sum > 0 ? this.host : sum < 0 ? this.visitor: null;
 				
 				// if equality after 5 pens.
 				var m = 126
@@ -252,7 +249,13 @@ class Match {
 					}
 					m += 1;
 				}
+
+				this.winner = sum > 0 ? this.host : sum < 0 ? this.visitor: null;
+			}else{
+				this.winner = this.hfinal_score > this.vfinal_score ? this.host : this.hfinal_score < this.vfinal_score ? this.visitor: null;	
 			}
+		}else{
+			this.winner = this.hfinal_score > this.vfinal_score ? this.host : this.hfinal_score < this.vfinal_score ? this.visitor: null;
 		}
 				
 	}
@@ -265,6 +268,7 @@ class Match {
 	plot(parent){
 		this.div = document.createElement("div");
 		this.div.classList.add("match");
+		//this.div.classList.add("container");
 
 		parent.style.display = "table";
 		this.divHst = document.createElement("div");
@@ -272,49 +276,30 @@ class Match {
 		this.divHst.classList.add("score_container");
 		this.divHst.style.float = "left";
 		this.divHst.appendChild(this.host.toDom());
-		this.dispScore(this.divHst, this.hscore, this.HNotes);
+		//this.dispScore(this.divHst, this.hscore, this.HNotes);
 		
 		this.divVis = document.createElement("div");
 		this.divVis.innerHTML = ""; 
 		this.divVis.classList.add("score_container");
 		this.divVis.style.float = "right";
 		this.divVis.appendChild(this.visitor.toDom());
-		this.dispScore(this.divVis, this.vscore, this.VNotes);
+		//this.dispScore(this.divVis, this.vscore, this.VNotes);
 		
 		parent.appendChild(this.div);
 	}
 	
-	dispResults(){		
-		if(this.minute <= 120){
-			var H = this.host_moments.filter(v => v <= this.minute).sort((a, b) => a - b);
-			this.HNotes = ""
-			for(var h in H){
-				this.HNotes += H[h] + "' ";
-			}
-			this.hscore = H.length;
-
-			var V = this.visitor_moments.filter(v => v <= this.minute).sort((a, b) => a - b);
-			this.VNotes = "";
-			for(var v in V){
-				this.VNotes += V[v] + "' ";
-			}
-			this.vscore = V.length;
-		}else{
-			this.Hpen += this.pen(this.host_moments.includes(this.minute)) + " ";
-			this.Vpen += this.pen(this.visitor_moments.includes(this.minute)) + " ";
-		}
+	dispResults(){
+		var hostScore = this.scoreValues(this.host_moments);
+		var visitorScore = this.scoreValues(this.visitor_moments);
 		
 		document.getElementById("clock").innerHTML = this.minute;
 
 		this.divHst.innerHTML = ""; //ERROR HERE when next step
 		this.divHst.style.float = "left";
 		this.divHst.appendChild(this.host.toDom());
-		this.dispScore(this.divHst);
-		
 		
 		this.divVis.innerHTML = ""; 
 		this.divVis.appendChild(this.visitor.toDom());
-		this.dispScore(this.divVis);
 		
 		this.div.innerHTML = "";
 		var tbl = document.createElement("table");
@@ -324,34 +309,36 @@ class Match {
 		this.divVis.style.width = "100px";
 		this.divHst.display = "inline-block";
 		this.divVis.display = "inline-block";
-		var btn = "<input type='button' name='btn_play' value='⯈' id= '" + this.matchId + "' style='width:10px;  height:25px;' onclick='play([this.id]);'></input>";
-		tbl.appendChild(table_styled_headers([[this.divHst.innerHTML, this.divHst.style], [btn, "width:20px;display: inline-block;"], [this.divVis.innerHTML, this.divVis.style]]));
+		var btn = "<input type='button' name='btn_play' value='⯈' id= '" + this.matchId + "' class='btn btn-sm btn-light' onclick='play([this.id]);'></input>";
+		tbl.appendChild(table_styled_headers([[this.host.toDom().innerHTML, this.divHst.style], [btn, "width:20px;display: inline-block;"], [this.visitor.toDom().innerHTML, this.divVis.style]]));
 		
 		var scoreStyle = "text-align:center; color:white; font-weight:bold; font-size: 200%;";
-		tbl.appendChild(table_styled_lines([[this.hscore, scoreStyle], [('000' + this.minute).substr(-3), "color:white;"], [this.vscore, scoreStyle]]));
+		tbl.appendChild(table_styled_lines([[hostScore["score"], scoreStyle], [('000' + this.minute).substr(-3), "color:white;"], [visitorScore["score"], scoreStyle]]));
 		
 		var noteStyle = "color:white;width:100px;display: inline-block;";
-		tbl.appendChild(table_styled_lines([[this.HNotes, noteStyle], ["", ""], [this.VNotes, noteStyle]]));
+		tbl.appendChild(table_styled_lines([[hostScore["score_moments"], noteStyle], ["", ""], [visitorScore["score_moments"], noteStyle]]));
 		
 		var penStyle = "width:100px;display: inline-block;";
-		tbl.appendChild(table_styled_lines([[this.Hpen, penStyle], ["", ""], [this.Vpen, penStyle]]));
+		tbl.appendChild(table_styled_lines([[hostScore["penos"], penStyle], ["", ""], [visitorScore["penos"], penStyle]]));
 		
 		this.div.appendChild(tbl);
 	}
-	
-	dispScore(parent, score = NaN, Notes = ""){
-		parent.style.backgroundColor = "black";
-		parent.style.color = "white";
-		if(!isNaN(score)){
-			var hs = document.createElement("h2");
-			hs.style.textAlign = "center";
-			hs.innerHTML = score;
-			parent.appendChild(hs);
+
+	scoreValues(goal_moments){
+		var G = goal_moments.filter(v => v <= this.minute).sort((a, b) => a - b);
+		var score = 0;
+		var score_moments = "";
+		var penos = "";
+		for(var g in G){
+			if(G[g] <= 120){
+				score += 1;
+				score_moments += G[g] + "' ";
+			}
 		}
-		var nt = document.createElement("h6");
-		nt.innerHTML = Notes;
-		parent.appendChild(nt);
-		return parent;
+		for(var m = 121; m <= this.minute; m++){
+			penos += this.pen(G.includes(m)) + " ";
+		}
+		return {"score":score, "score_moments": score_moments, "penos": penos}
 	}
 	
 	getRandomInt(max) {
@@ -1971,21 +1958,25 @@ function plot(){
 			var h = findTeam(m.host.name);
 			var v = findTeam(m.visitor.name);
 			
-			h.goalFor += m.hscore;
-			h.homeGoals += m.hscore;
-			h.goalAgainst += m.vscore;
+			h.goalFor += m.hfinal_score;
+			h.homeGoals += m.hfinal_score;
+			h.goalAgainst += m.vfinal_score;
 			
-			v.goalFor += m.vscore;
-			v.goalAgainst += m.hscore;
-			if(m.hscore > m.vscore){
+			v.goalFor += m.vfinal_score;
+			v.goalAgainst += m.hfinal_score;
+			if(m.winner === null){
+				h.nulls += 1;
+				v.nulls += 1;
+			}else if(m.winner.id == h.team.id){
 				h.wins += 1;
 				v.defeats += 1;
-			}else if(m.hscore < m.vscore){
+			}else if(m.winner.id == v.team.id){
 				h.defeats += 1;
 				v.wins += 1;
 			}else{
+				console.error("no result")
 				h.nulls += 1;
-				v.nulls += 1;
+				v.nulls += 1;	
 			}
 			m.registered = true;
 		}
