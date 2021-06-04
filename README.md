@@ -39,4 +39,4 @@ The constructor takes the 4 variables.
 
 # Champions league simulation:
 
-	
+**つづく**
