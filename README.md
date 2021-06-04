@@ -36,4 +36,7 @@ The constructor takes the 4 variables.
 - **team2** of type *Team*, represents the visitor team.
 - **HandW** of type *boolean*, when **true** then it is a two-legged home and away game (the home team gets more advantages in this case for playing at home), when **false** then it is one game match played in a third party playground, so the home team will not take any advantages for playing home.
 - **extra** of type *boolean*, determines if extra-time will be applied in case of equality. Note that equanlity in case of two-legged games is computed in function of the results of the two matchs together.
+
+# Champions league simulation:
+
 	
