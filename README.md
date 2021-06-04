@@ -29,6 +29,17 @@ For some reasons we can attribute the team to termporary groups. This function a
 #### ToDom
 ToDom method allows to plot the team within an html element.
 
+## The class poolTeam
+Represents the team of a pool in a competition. It has the following features:
+- **team**: of type *Team*.
+- **wins**: number of won matchs by the team 
+- **nulls**: number of null matchs of the team
+- **defeats** : number of defeats of the team
+- **goalsFor** : total of goals scored by the team in all his pool matchs
+- **homeGoals** : number of goals scored at home (this is useful in some cases for ranking teams)
+- **goalsAgainst**: number of goals scored against ths team 
+- **rank**: the rank of the team within the pool.
+
 ## The class Match
 This class represents a match between two teams.
 The constructor takes the 4 variables.
