@@ -47,6 +47,13 @@ The constructor takes the 4 variables.
 - **team2** of type *Team*, represents the visitor team.
 - **HandW** of type *boolean*, when **true** then it is a two-legged home and away game (the home team gets more advantages in this case for playing at home), when **false** then it is one game match played in a third party playground, so the home team will not take any advantages for playing home.
 - **extra** of type *boolean*, determines if extra-time will be applied in case of equality. Note that equanlity in case of two-legged games is computed in function of the results of the two matchs together.
+- **host_moments** / **visitor_moments** : an array of moments of team's goals. For exemple the array [32, 75] means that the team would score two goals in this match at 32nd and 75th minutes.
+- **endsAt**: usually 90, which means that the match takes 90 minutes, it would become 120 if much has extra time, and more if match arrives to penalities.
+- **winner**: the nmae of the winner team, or null in case of draw. This is used because in some cases the team might win the current match but looses in the sum of both matchs.
+- **hfinal_score** / **vfinal_score**:
+- **minute**: the current minute of the match.
+- **registered**:
+- **matchId**: 
 
 # Champions league simulation:
 
