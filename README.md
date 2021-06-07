@@ -1,6 +1,8 @@
 # Football-results-simulation
 This project simulates the results of football leagues and cup. This version simulate the european Champions league. 
 
+Th idea started by a trial to find a simple equation capable to give a realistic estimation of a football match result. Without machine learning or trained model, just a mathematical formula that uses the fifa ranking points of each team, to give an estimation of the number of goals each team might score against the other.
+
 For the moment, I decided to make the whole project in one Html file that contains all CSS and JS codes, which make the file too much long and complicated (may be I change my mind later). I just wanted to be easy to execute.
 
 The simulator uses JS classes, such as:
