@@ -6,7 +6,7 @@ Th idea started by a trial to find a simple equation capable to give a realistic
 
 
 # How to use it
-For the moment, I decided to make the whole project in one Html file that contains all CSS and JS codes, which make the file too much long and complicated (may be I change my mind later). I just wanted to be easy to execute. So all you need is just to copy the html file and execute it in your borwoser.
+For the moment, I decided to make the whole project in one Html file that contains all CSS and JS codes, which make the file too much long and complicated (may be I change my mind later). I just wanted to be easy to execute. So all you need is just to copy the html file and execute it in your borwser.
 
 The simulator uses JS classes, such as:
 
