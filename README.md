@@ -3,8 +3,14 @@ This project simulates the results of football leagues and cup. This version sim
 
 Th idea started by a trial to find a simple equation capable to give a realistic estimation of a football match result. Without machine learning or trained model, just a mathematical formula that uses the fifa ranking points of each team, to give an estimation of the number of goals each team might score against the other.
 
-After succeeding a more or less realistic football match result, I extended th project to see who would it do for an entire cup or league.
-It was challenging because I had to use many ordering, and other mathematical stuff.
+After succeeding a more or less realistic football match result, I extended th project to see how would it do for an entire cup or league.
+It was challenging because I had to use many ordering, and other mathematical stuff. Some problems that have been treated in this project:
+- Divide a competition to multiple steps with different systems (knock out, league, ...).
+- Distributing N teams in M groups:
+  - In a random way.
+  - with respect to teams ranking (dividing teams to multiple levels, were two teams from the same level should not be in the same group).
+  - with respect to the results of a team in the precedent step of the competition.
+- generating matchs of each couple of teams within a group, respecting that all teams of the group have to play a the same time, and that a team can't play two matchs at the same day.
 
 # How to use it
 For the moment, I decided to make the whole project in one Html file that contains all CSS and JS codes, which make the file too much long and complicated (may be I change my mind later). I just wanted to be easy to execute. So all you need is just to copy the html file and execute it in your borwser.
