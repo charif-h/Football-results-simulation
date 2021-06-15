@@ -3,7 +3,7 @@ This project simulates the results of football leagues and cup. This version sim
 
 Th idea started by a trial to find a simple equation capable to give a realistic estimation of a football match result. Without machine learning or trained model, just a mathematical formula that uses the fifa ranking points of each team, to give an estimation of the number of goals each team might score against the other.
 
-After succeeding a more or less realistic football match result, I extended th project to see how would it do for an entire cup or league.
+After succeeding a more or less realistic football match result, I extended th project to see how would it do for an entire Competition.
 It was challenging because I had to use many ordering, and other mathematical stuff. Some problems that have been treated in this project:
 - Divide a competition to multiple steps with different systems (knock out, league, ...).
 - Distributing N teams in M groups:
